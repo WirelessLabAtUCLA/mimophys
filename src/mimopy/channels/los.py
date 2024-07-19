@@ -18,9 +18,7 @@ class LoS(Channel):
 
     @property
     def aoa(self):
-        range, az, el = relative_position(
-            self.tx.array_center, self.rx.array_center
-        )
+        range, az, el = relative_position(self.tx.array_center, self.rx.array_center)
         return az, el
 
     @aoa.setter
@@ -29,21 +27,18 @@ class LoS(Channel):
 
     aod = aoa
 
-    def realize(self, az=None, el=None):
-        """Realize the channel.
-
-        Parameters
-        ----------
-        az, el: float, optional
-            AoA/AoD. If not specified, the angles are
-            calculated based on the relative position of the transmitter and receiver.
-        """
-        range, az, el = relative_position(
-            self.tx.array_center, self.rx.array_center
-        )
+    def _compute_H(self, az, el):
         tx_response = self.tx.get_array_response(az, el)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
-        # H = np.outer(tx_response, rx_response).T
+        H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())
+        return H
+
+    def realize(self):
+        """Realize the channel."""
+        # TODO: warning if channel matrix not updated/realized
+        range, az, el = relative_position(self.tx.array_center, self.rx.array_center)
+        tx_response = self.tx.get_array_response(az, el)
+        rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
         self.H = np.outer(rx_response, tx_response.conj())
         self.normalize_energy(self._energy)
         return self

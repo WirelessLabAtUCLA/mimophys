@@ -102,7 +102,7 @@ class Channel:
         """Noise power after beamforming combining in linear scale."""
         # w = self.rx.weights.flatten()
         # return float(LA.norm(w) ** 2 * self.rx.noise_power_lin)
-        return float(self.rx.noise_power_lin)
+        return float(self.rx.noise)
 
     @property
     def bf_noise_power_db(self) -> float:
@@ -152,7 +152,7 @@ class Channel:
     @property
     def snr_upper_bound(self) -> float:
         """return the SNR upper bound based on MRC+MRT with line-of-sight channel"""
-        return self.rx_power * self.tx.N * self.rx.N / self.rx.noise_power_lin
+        return self.rx_power * self.tx.N * self.rx.N / self.rx.noise
 
     @property
     def snr_upper_bound_db(self) -> float:

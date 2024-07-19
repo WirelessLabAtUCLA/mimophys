@@ -27,7 +27,7 @@ class AntennaArray:
         self.weights = np.ones(N)
         self.marker = "o"
         self.power = 1
-        self.noise_power = 0
+        self.noise_db = 0
         self.name = "AntennaArray"
         self.spacing = 0.5
         self.frequency = 1e9
@@ -85,12 +85,12 @@ class AntennaArray:
         self.coordinates += delta_location
 
     @property
-    def noise_power_lin(self):
-        return 10 ** (self.noise_power / 10)
+    def noise(self):
+        return 10 ** (self.noise_db / 10)
 
-    @noise_power_lin.setter
-    def noise_power_lin(self, noise_power_lin):
-        self.noise_power = 10 * log10(noise_power_lin + np.finfo(float).tiny)
+    @noise.setter
+    def noise(self, noise):
+        self.noise_db = 10 * log10(noise + np.finfo(float).tiny)
 
     @classmethod
     def ula(
@@ -244,7 +244,7 @@ class AntennaArray:
         if LA.norm(self.weights) != 0:
             self.weights = self.weights * norm / LA.norm(self.weights)
 
-    def set_weights(self, weights):
+    def set_weights(self, weights: Iterable | complex):
         """Set the weights of the antennas.
 
         Parameters

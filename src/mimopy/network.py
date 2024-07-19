@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Optional
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -175,7 +175,7 @@ class Network:
     # Link measurement methods wrapper
     # ===================================================================
 
-    def rx_power(self, link: Channel | str = None) -> float:
+    def rx_power(self, link: Optional[Channel | str] = None) -> float:
         if link is None:
             return {lk: self.rx_power(lk) for lk in self.links.values()}
         if isinstance(link, str):
@@ -184,7 +184,7 @@ class Network:
             return {lk: self.rx_power(lk) for lk in link}
         return link.rx_power
 
-    def gain(self, link: Channel | str = None, db=True) -> float:
+    def gain(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the beamforming gain of the link in dB."""
         if link is None:
             return {lk: self.gain(lk, db) for lk in self.links.values()}
@@ -196,7 +196,7 @@ class Network:
 
     bf_gain = gain
 
-    def signal_power(self, link: Channel | str = None, db=True) -> float:
+    def signal_power(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the beamforming gain of the link in dB."""
         if link is None:
             return {lk: self.signal_power(lk, db) for lk in self.links.values()}
@@ -206,7 +206,7 @@ class Network:
             return {lk: self.snr(lk, db) for lk in link}
         return link.signal_power_db if db else link.signal_power
 
-    def bf_noise_power(self, link: Channel | str = None, db=True) -> float:
+    def bf_noise_power(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the noise power after beamforming in dBm."""
         if link is None:
             return {lk: self.bf_noise_power(lk, db) for lk in self.links.values()}
@@ -216,7 +216,7 @@ class Network:
             return {lk: self.snr(lk, db=db) for lk in link}
         return link.bf_noise_power_db if db else link.bf_noise_power
 
-    def snr(self, link: Channel | str = None, db=True) -> float:
+    def snr(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the signal-to-noise ratio (SNR) of the link."""
         if link is None:
             return {lk: self.snr(lk, db) for lk in self.links.values()}
@@ -226,7 +226,7 @@ class Network:
             link = self.links[link]
         return link.snr_db if db else link.snr
 
-    def snr_upper_bound(self, link: Channel | str = None, db=True) -> float:
+    def snr_upper_bound(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the SNR upper bound of the link."""
         if link is None:
             return {lk: self.snr_upper_bound(lk, db) for lk in self.links.values()}
@@ -268,6 +268,8 @@ class Network:
             return {lk: self.sinr(lk, db) for lk in self.links.values()}
         if isinstance(link, str):
             link = self.links[link]
+        if isinstance(link, Iterable):
+            return {lk: self.sinr(lk, db) for lk in link}
         sinr = self.signal_power(link, db=False) / (
             self.interference(link, db=False) + self.bf_noise_power(link, db=False)
         )
@@ -283,7 +285,7 @@ class Network:
 
     se = spectral_efficiency
 
-    def inr_upper_bound(self, link: Channel | str = None, db=True) -> float:
+    def inr_upper_bound(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the INR upper bound of the link. See Eq. (9) in LoneSTAR"""
         if link is None:
             return {lk: self.inr_upper_bound(lk, db) for lk in self.links.values()}
@@ -293,7 +295,7 @@ class Network:
         for ul in self.connections[link.rx]["ul"]:
             if ul != link:
                 sig_pow_nb += ul.rx_power * ul.tx.N * ul.rx.N
-        inr_ub = sig_pow_nb / link.rx.noise_power_lin
+        inr_ub = sig_pow_nb / link.rx.noise
         return 10 * log10(inr_ub + np.finfo(float).tiny) if db else inr_ub
 
     # ===================================================================
