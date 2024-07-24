@@ -275,12 +275,14 @@ class Network:
         )
         return 10 * log10(sinr + np.finfo(float).tiny) if db else sinr
 
-    def spectral_efﬁciency(self, link=None) -> float:
+    def spectral_efﬁciency(self, link: Optional[Channel | str] = None) -> float:
         """Get the spectral efﬁciency of the link in bps/Hz."""
         if link is None:
             return {lk: self.spectral_efﬁciency(lk) for lk in self.links.values()}
         if isinstance(link, str):
             link = self.links[link]
+        if isinstance(link, Iterable):
+            return {lk: self.spectral_efﬁciency(lk) for lk in link}
         return float(log2(1 + self.sinr(link, db=False)))
 
     se = spectral_efficiency
