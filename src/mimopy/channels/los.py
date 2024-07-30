@@ -18,7 +18,7 @@ class LoS(Channel):
 
     @property
     def aoa(self):
-        range, az, el = relative_position(self.tx.array_center, self.rx.array_center)
+        _, az, el = relative_position(self.tx.array_center, self.rx.array_center)
         return az, el
 
     @aoa.setter
@@ -36,7 +36,7 @@ class LoS(Channel):
     def realize(self):
         """Realize the channel."""
         # TODO: warning if channel matrix not updated/realized
-        range, az, el = relative_position(self.tx.array_center, self.rx.array_center)
+        _, az, el = relative_position(self.tx.array_center, self.rx.array_center)
         tx_response = self.tx.get_array_response(az, el)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
         self.H = np.outer(rx_response, tx_response.conj())

@@ -135,7 +135,7 @@ class Network:
         for node in self.nodes.values():
             node.set_weights(1)
 
-    def _move_node(self, node: str | AntennaArray, location):
+    def move_node(self, node: str | AntennaArray, location):
         """Move a node to a new location.
 
         Parameters
@@ -146,30 +146,11 @@ class Network:
             New location of the node."""
         if isinstance(node, str):
             node = self.nodes[node]
-
         node.location = np.asarray(location)
         for link in self.connections[node]["dl"]:
             link.realize()
         for link in self.connections[node]["ul"]:
             link.realize()
-
-    def move_nodes(self, nodes, locations):
-        """Move nodes to new locations.
-
-        Parameters
-        ----------
-        nodes : list
-            Nodes to move.
-        locations : list
-            New locations of the nodes."""
-
-        if len(nodes) != len(locations):
-            raise ValueError("The number of nodes and locations must be the same.")
-        if isinstance(nodes, str):
-            self._move_node(nodes, locations)
-            return
-        for node, location in zip(nodes, locations):
-            self._move_node(node, location)
 
     # ===================================================================
     # Link measurement methods wrapper

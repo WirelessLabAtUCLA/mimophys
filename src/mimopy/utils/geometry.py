@@ -24,10 +24,10 @@ def relative_position(loc1, loc2) -> Tuple[float, float, float]:
     loc1 = np.asarray(loc1).reshape(3)
     loc2 = np.asarray(loc2).reshape(3)
     dxyz = dx, dy, dz = loc2 - loc1
-    range = np.linalg.norm(dxyz)
+    r = np.linalg.norm(dxyz)
     az = np.arctan2(dy, dx)
-    el = np.arcsin(dz / range)
-    return range, az, el
+    el = np.arcsin(dz / r)
+    return r, az, el
 
 def sph2cart(r, az, el):
     """Convert spherical coordinates to Cartesian coordinates.
