@@ -1,7 +1,9 @@
 from abc import abstractmethod
+
 import numpy as np
 import numpy.linalg as LA
-from numpy import log10, log2
+from numpy import log2, log10
+
 from ..devices.antenna_array import AntennaArray
 from .path_loss import get_path_loss
 
@@ -147,7 +149,7 @@ class Channel:
     @property
     def capacity(self) -> float:
         """Channel capacity in bps/Hz."""
-        return log2(1 + self.snr)
+        return log2(1 + self.snr_upper_bound)
 
     @property
     def snr_upper_bound(self) -> float:

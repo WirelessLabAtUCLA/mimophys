@@ -380,7 +380,6 @@ class AntennaArray:
 
     def _rotate(self, coordinates, x_angle, y_angle, z_angle):
         """Rotate the array by the given angles.
-
         Parameters
         ----------
         x_angle : float
@@ -578,13 +577,14 @@ class AntennaArray:
 
     def plot_gain(
         self,
-        polar=False,
+        polar=True,
         cut=0,
         angles=np.linspace(-89, 89, 356),
         cut_along="el",
         weights=None,
         db=True,
         ax=None,
+        ylim=-20,
         **kwargs,
     ):
         """Plot the array pattern at a given elevation or azimuth.
@@ -625,12 +625,12 @@ class AntennaArray:
 
         if ax is None:
             if polar:
-                fig, ax = plt.subplots(subplot_kw={"projection": "polar"}, **kwargs)
+                fig, ax = plt.subplots(subplot_kw={"projection": "polar"})
             else:
-                fig, ax = plt.subplots(**kwargs)
+                fig, ax = plt.subplots()
         if polar:
-            ax.plot(angles * np.pi / 180, gain)
-            ax.set_theta_zero_location("N")
+            ax.plot(angles * np.pi / 180, gain, **kwargs)
+            ax.set_theta_zero_location("E")
             # ax.set_theta_direction(-1)
             # ax.set_rlabel_position(-90)
             # ax.set_rticks([-20, -10, 0])
@@ -642,7 +642,7 @@ class AntennaArray:
             ax.set_xlabel("Azimuth (deg)")
             ax.set_theta_direction(-1)
         else:
-            ax.plot(angles, gain)
+            ax.plot(angles, gain, **kwargs)
             # ax.set_ylim(-(max(array_response)), max(array_response) + 10)
             ax.set_xlabel("Azimuth (deg)")
             ax.set_ylabel("Gain (dB)")
