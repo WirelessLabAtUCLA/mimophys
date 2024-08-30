@@ -1,7 +1,8 @@
 import numpy as np
-from .awgn import Channel
+
 from ..devices import AntennaArray
-from .path_loss import get_path_loss
+from .awgn import Channel
+from .path_loss import PathLoss
 
 
 class Rayleigh(Channel):
@@ -14,7 +15,12 @@ class Rayleigh(Channel):
     """
 
     def __init__(
-        self, tx: AntennaArray, rx: AntennaArray, path_loss="no_loss", *args, **kwargs
+        self,
+        tx: AntennaArray,
+        rx: AntennaArray,
+        path_loss: str | PathLoss = "no_loss",
+        *args,
+        **kwargs,
     ):
         super().__init__(tx, rx, path_loss, *args, **kwargs)
 

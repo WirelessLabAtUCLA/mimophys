@@ -1,6 +1,9 @@
-from .awgn import Channel
 import numpy as np
+
+from ..devices import AntennaArray
 from ..utils.geometry import relative_position
+from .awgn import Channel
+from .path_loss import PathLoss
 
 
 class LoS(Channel):
@@ -13,7 +16,14 @@ class LoS(Channel):
         calculated based on the relative position of the transmitter and receiver.
     """
 
-    def __init__(self, tx, rx, path_loss="no_loss", *args, **kwargs):
+    def __init__(
+        self,
+        tx: AntennaArray,
+        rx: AntennaArray,
+        path_loss: str | PathLoss = "no_loss",
+        *args,
+        **kwargs,
+    ):
         super().__init__(tx, rx, path_loss, *args, **kwargs)
 
     @property
@@ -33,7 +43,7 @@ class LoS(Channel):
         H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())
         return H
 
-    def realize(self):
+    def realize(self) -> "LoS":
         """Realize the channel."""
         # TODO: warning if channel matrix not updated/realized
         _, az, el = relative_position(self.tx.array_center, self.rx.array_center)

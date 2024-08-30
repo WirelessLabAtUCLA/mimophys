@@ -1,7 +1,8 @@
 from numpy import pi
+
+from ...utils.geometry import relative_position
 from ..awgn import Channel
 from .path_loss import PathLoss
-from ...utils.geometry import relative_position
 
 
 class FreeSpaceLoss(PathLoss):
@@ -9,6 +10,7 @@ class FreeSpaceLoss(PathLoss):
 
     def __str__(self) -> str:
         return "Free-space loss"
+
     def received_power(self, channel:Channel):
         """
         Calculate the received power at the receiver.

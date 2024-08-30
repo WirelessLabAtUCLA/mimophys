@@ -5,7 +5,7 @@ import numpy.linalg as LA
 from numpy import log2, log10
 
 from ..devices.antenna_array import AntennaArray
-from .path_loss import get_path_loss
+from .path_loss import PathLoss, get_path_loss
 
 
 class Channel:
@@ -27,8 +27,8 @@ class Channel:
         self,
         tx: AntennaArray,
         rx: AntennaArray,
-        path_loss="no_loss",
-        seed=None,
+        path_loss: str | PathLoss = "no_loss",
+        seed: int = None,
         *args,
         **kwargs,
     ):
@@ -36,7 +36,6 @@ class Channel:
         self.name = self.__class__.__name__
         self.tx = tx
         self.rx = rx
-        self.path_loss = get_path_loss(path_loss)
         # energy of the channel matrix TO BE REALIZED
         self._energy = self.tx.N * self.rx.N
         self.seed = seed
@@ -44,6 +43,12 @@ class Channel:
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
         self._carrier_wavelength = self.propagation_velocity / self.carrier_frequency
+        if isinstance(path_loss, str):
+            self.path_loss = get_path_loss(path_loss)
+        elif isinstance(path_loss, PathLoss):
+            self.path_loss = path_loss
+        else:
+            raise ValueError("path_loss must be a string or PathLoss object.")
 
         for kw, arg in kwargs.items():
             setattr(self, kw, arg)

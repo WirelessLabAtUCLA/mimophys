@@ -1,10 +1,10 @@
 from typing import Iterable
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as LA
-from numpy import log10
-import matplotlib.pyplot as plt
 from matplotlib import cm
+from numpy import log10
 
 
 class AntennaArray:
@@ -21,7 +21,7 @@ class AntennaArray:
         unit weight.
     """
 
-    def __init__(self, N, coordinates=[0, 0, 0], **kwargs):
+    def __init__(self, N: int, coordinates: Iterable = [0, 0, 0], **kwargs):
         self.num_antennas = N
         self.coordinates = np.array(coordinates)
         self.weights = np.ones(N)

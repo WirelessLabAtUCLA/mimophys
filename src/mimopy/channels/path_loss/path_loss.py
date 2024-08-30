@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from numpy import log10
 from typing import TYPE_CHECKING
+
+from numpy import log10
 
 if TYPE_CHECKING:
     from ..awgn import Channel
