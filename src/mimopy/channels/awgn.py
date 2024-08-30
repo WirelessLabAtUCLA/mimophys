@@ -1,10 +1,13 @@
-from typing import Any
+from abc import abstractmethod
+
 import numpy as np
 import numpy.linalg as LA
-from numpy import log10, log2
+from numpy import log2, log10
+
+from ..devices.antenna_array import AntennaArray
+from .path_loss import get_path_loss
 
 
-# from ..array import AntennaArray
 class Channel:
     """Base class for AWGN Channel.
 
@@ -18,164 +21,172 @@ class Channel:
         propagation_velocity (float): Propagation velocity in meters per second.
         carrier_frequency (float): Carrier frequency in Hertz.
         carrier_wavelength (float): Carrier wavelength in meters.
-        normalized_channel_energy (float): Normalized channel energy.
     """
 
-    def __init__(self, tx=None, rx=None, name=None, *args, **kwargs):
+    def __init__(
+        self,
+        tx: AntennaArray,
+        rx: AntennaArray,
+        path_loss="no_loss",
+        seed=None,
+        *args,
+        **kwargs,
+    ):
         # use class name as default name
-        self.name = name
-        if name is None:
-            self.name = self.__class__.__name__
+        self.name = self.__class__.__name__
         self.tx = tx
         self.rx = rx
-        self._channel_matrix = None
-        self.noise_power = 0
+        self.path_loss = get_path_loss(path_loss)
+        # energy of the channel matrix TO BE REALIZED
+        self._energy = self.tx.N * self.rx.N
+        self.seed = seed
+        self.channel_matrix = None
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
         self._carrier_wavelength = self.propagation_velocity / self.carrier_frequency
-        self.normalized_channel_energy = False
+
+        for kw, arg in kwargs.items():
+            setattr(self, kw, arg)
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        return self.name
+        return f"{self.name} ({self.__class__.__name__})"
+
+    H = property(lambda self: self.channel_matrix)
+
+    @H.setter
+    def H(self, H):
+        self.channel_matrix = H
 
     @property
-    def ul(self):
-        return self.tx
+    def energy(self):
+        """Energy of the channel matrix."""
+        return LA.norm(self.H, "fro") ** 2
 
-    @ul.setter
-    def ul(self, tx):
-        self.tx = tx
+    @energy.setter
+    def energy(self, energy):
+        self._energy = energy
 
     @property
-    def dl(self):
-        return self.rx
+    def nodes(self):
+        return [self.tx, self.rx]
 
-    @dl.setter
-    def dl(self, rx):
-        self.rx = rx
+    def has_node(self, node):
+        return node == self.tx or node == self.rx
 
     # ========================================================
     # Channel matrix
     # ========================================================
 
+    @abstractmethod
     def realize(self):
         """Realize the channel."""
-        raise NotImplementedError
+        pass
 
-    @property
-    def channel_matrix(self):
-        """Channel matrix, setting the channel matrix will normalize the channel
-        energy."""
-        return self._channel_matrix
-
-    @channel_matrix.setter
-    def channel_matrix(self, channel_matrix):
-        if self.normalized_channel_energy:
-            self._channel_matrix = (
-                channel_matrix
-                * np.sqrt(self.normalized_channel_energy)
-                / LA.norm(channel_matrix, ord="fro")
-            )
-        else:
-            self._channel_matrix = channel_matrix
-
-    H = channel_matrix
+    def normalize_energy(self, energy):
+        """Normalize the channel energy."""
+        if energy is not None:
+            self.H = np.sqrt(energy) * self.H / LA.norm(self.H, "fro")
+        return self.H
 
     # ========================================================
     # Measurements
     # ========================================================
+    @property
+    def rx_power(self):
+        """Received power in linear scale."""
+        return self.path_loss.received_power(self)
 
     @property
-    def noise_power_lin(self):
-        return 10 ** (self.noise_power / 10)
-
-    @noise_power_lin.setter
-    def noise_power_lin(self, noise_power_lin):
-        self.noise_power = 10 * log10(noise_power_lin + np.finfo(float).tiny)
+    def bf_noise_power(self):
+        """Noise power after beamforming combining in linear scale."""
+        # w = self.rx.weights.flatten()
+        # return float(LA.norm(w) ** 2 * self.rx.noise_power_lin)
+        return float(self.rx.noise)
 
     @property
-    def bf_gain_lin(self) -> float:
-        """Beamforming gain in linear scale. Note that the transmit weights are
-        normalized to have unit norm."""
-        f = self.tx.weights.reshape(-1, 1)
-        f = f / LA.norm(f)
-        H = self.channel_matrix
-        w = self.rx.weights.reshape(-1, 1)
-        return float(np.abs(w.T @ H @ f) ** 2)  # TODO: standardize this
+    def bf_noise_power_db(self) -> float:
+        """Noise power after beamforming in dBm."""
+        return 10 * log10(self.bf_noise_power + np.finfo(float).tiny)
 
     @property
     def bf_gain(self) -> float:
-        """Beamforming gain in dB."""
-        return 10 * log10(self.bf_gain_lin + np.finfo(float).tiny)
-    
-    gain_lin = bf_gain_lin
-    gain = bf_gain    
+        """Normalized beamforming gain |wHf|^2 / Nt in linear scale."""
+        f = self.tx.weights.reshape(-1, 1)
+        w = self.rx.weights.reshape(-1, 1)
+        return float(np.abs(w.T @ self.H @ f) ** 2 / (self.tx.N * LA.norm(w) ** 2))
 
     @property
-    def signal_power_lin(self) -> float:
-        """Signal power after beamforming in linear scale."""
-        return self.tx.power * self.bf_gain_lin
+    def bf_gain_db(self) -> float:
+        """Normalized beamforming gain |wHf|^2 / Nt in dB."""
+        return 10 * log10(self.bf_gain + np.finfo(float).tiny)
+
+    gain = bf_gain
+    gain_db = bf_gain_db
 
     @property
     def signal_power(self) -> float:
-        """Signal power after beamforming in dBm."""
-        return 10 * log10(self.signal_power_lin + np.finfo(float).tiny)
+        """Signal power after beamforming in linear scale."""
+        return self.rx_power * self.bf_gain
 
     @property
-    def bf_noise_power_lin(self):
-        """Noise power after beamforming in linear scale."""
-        w = self.rx.weights.reshape(1, -1)
-        return float(LA.norm(w) ** 2 * self.noise_power_lin)
-
-    @property
-    def bf_noise_power(self) -> float:
-        """Noise power after beamforming in dBm."""
-        return 10 * log10(self.bf_noise_power_lin + np.finfo(float).tiny)
-
-    @property
-    def snr_lin(self) -> float:
-        """Signal-to-noise ratio (SNR) in linear scale."""
-        return float(self.signal_power_lin / self.bf_noise_power_lin)
+    def signal_power_db(self) -> float:
+        """Normalized signal power after beamforming in dBm."""
+        return 10 * log10(self.signal_power + np.finfo(float).tiny)
 
     @property
     def snr(self) -> float:
+        """Signal-to-noise ratio (SNR) in linear scale."""
+        return float(self.rx_power * self.bf_gain / self.bf_noise_power)
+
+    @property
+    def snr_db(self) -> float:
         """Signal-to-noise ratio (SNR) in dB."""
-        return 10 * log10(self.snr_lin + np.finfo(float).tiny)
+        return 10 * log10(self.snr + np.finfo(float).tiny)
 
     @property
     def capacity(self) -> float:
         """Channel capacity in bps/Hz."""
-        return log2(1 + self.snr_lin)
+        return log2(1 + self.snr_upper_bound)
+
+    @property
+    def snr_upper_bound(self) -> float:
+        """return the SNR upper bound based on MRC+MRT with line-of-sight channel"""
+        return self.rx_power * self.tx.N * self.rx.N / self.rx.noise
+
+    @property
+    def snr_upper_bound_db(self) -> float:
+        """return the SNR upper bound based on MRC+MRT with line-of-sight channel"""
+        return 10 * log10(self.snr_upper_bound + np.finfo(float).tiny)
 
     # ========================================================
     # Skip Setters
     # ========================================================
 
-    @signal_power_lin.setter
-    def signal_power_lin(self, _):
-        self._cant_be_set()
-
     @signal_power.setter
     def signal_power(self, _):
         self._cant_be_set()
 
-    @bf_noise_power_lin.setter
-    def bf_noise_power_lin(self, _):
+    @signal_power_db.setter
+    def signal_power_db(self, _):
         self._cant_be_set()
 
     @bf_noise_power.setter
     def bf_noise_power(self, _):
         self._cant_be_set()
 
-    @snr_lin.setter
-    def snr_lin(self, _):
+    @bf_noise_power_db.setter
+    def bf_noise_power_db(self, _):
         self._cant_be_set()
 
     @snr.setter
     def snr(self, _):
+        self._cant_be_set()
+
+    @snr_db.setter
+    def snr_db(self, _):
         self._cant_be_set()
 
     @capacity.setter
@@ -186,17 +197,6 @@ class Channel:
     def _cant_be_set():
         # raise warning
         raise Warning("This property can't be set, skipping...")
-
-    # def get_bf_gain(self, linear=False) -> float:
-    #     """Get the beamforming gain of the channel in dBm."""
-    #     f = self.tx.get_weights().reshape(-1, 1)
-    #     H = self.get_channel_matrix()
-    #     w = self.rx.get_weights().reshape(-1, 1)
-    #     P = self.tx.power
-    #     gain = P * np.abs(w.conj().T @ H @ f) ** 2
-    #     if linear:
-    #         return gain
-    #     return 10 * log10(gain)
 
     # ========================================================
     # Physical properties
@@ -233,20 +233,3 @@ class Channel:
     def carrier_wavelength(self, carrier_wavelength):
         self._carrier_wavelength = carrier_wavelength
         self._carrier_frequency = self.propagation_velocity / carrier_wavelength
-
-    @staticmethod
-    def get_relative_position(loc1, loc2):
-        """Returns the relative position (range, azimuth and elevation) between 2 locations.
-
-        Parameters
-        ----------
-            loc1, loc2: array_like, shape (3,)
-                Location of the 2 points.
-        """
-        loc1 = np.asarray(loc1).reshape(3)
-        loc2 = np.asarray(loc2).reshape(3)
-        dxyz = dx, dy, dz = loc2 - loc1
-        range = np.linalg.norm(dxyz)
-        az = np.arctan2(dy, dx)
-        el = np.arcsin(dz / range)
-        return range, az, el
