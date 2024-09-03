@@ -86,14 +86,25 @@ class Channel:
     # ========================================================
 
     @abstractmethod
+    def generate_channel_matrix(self):
+        """Generate the channel matrix."""
+        pass
+
+    @abstractmethod
     def realize(self):
         """Realize the channel."""
         pass
 
+    @staticmethod
+    def normalize_channel(H, energy):
+        """Normalize the channel energy."""
+        H = np.sqrt(energy) * H / LA.norm(H, "fro")
+        return H
+
     def normalize_energy(self, energy):
         """Normalize the channel energy."""
         if energy is not None:
-            self.H = np.sqrt(energy) * self.H / LA.norm(self.H, "fro")
+            self.H = self.normalize_channel(self.H, energy)
         return self.H
 
     # ========================================================

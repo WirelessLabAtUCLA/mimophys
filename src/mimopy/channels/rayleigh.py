@@ -4,6 +4,8 @@ from ..devices import AntennaArray
 from .awgn import Channel
 from .path_loss import PathLoss
 
+rng = np.random.default_rng()
+
 
 class Rayleigh(Channel):
     """Rayleigh channel class.
@@ -29,7 +31,9 @@ class Rayleigh(Channel):
         np.random.seed(self.seed)
         energy = self._energy / self.tx.N / self.rx.N
         shape = (self.rx.N, self.tx.N)
-        self.channel_matrix = np.sqrt(energy / 2) * (
-            np.random.randn(*shape) + 1j * np.random.randn(*shape)
-        )
+        # self.channel_matrix = np.sqrt(energy / 2) * (
+        #     np.random.randn(*shape) + 1j * np.random.randn(*shape)
+        # )
+        self.channel_matrix = rng.normal(0, np.sqrt(energy / 2), shape)
+        self.channel_matrix = self.channel_matrix.view(np.complex128)
         return self
