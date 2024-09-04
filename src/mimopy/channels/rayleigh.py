@@ -34,6 +34,6 @@ class Rayleigh(Channel):
         # self.channel_matrix = np.sqrt(energy / 2) * (
         #     np.random.randn(*shape) + 1j * np.random.randn(*shape)
         # )
-        self.channel_matrix = rng.normal(0, np.sqrt(energy / 2), shape)
-        self.channel_matrix = self.channel_matrix.view(np.complex128)
+        self.channel_matrix = rng.normal(0, np.sqrt(energy / 2), (*shape, 2))
+        self.channel_matrix = self.channel_matrix.view(np.complex128).squeeze()
         return self
