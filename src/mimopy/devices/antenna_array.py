@@ -449,7 +449,7 @@ class AntennaArray:
     # Get AntennaArray Properties
     ############################
 
-    def get_array_response(self, az=0, el=0, torch_device=None):
+    def get_array_response(self, az=0, el=0, torch_device=None, return_tensor=False):
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
@@ -464,6 +464,10 @@ class AntennaArray:
             Elevation angle in radians.
         torch_device : str, optional
             If given, PyTorch is used to calculate the array response. Default is None.
+        return_tensor : bool, optional
+            If True, the array response is returned as a PyTorch tensor.
+            Only valid if torch_device is given.
+            Default is False.
 
         Returns
         -------
@@ -471,7 +475,8 @@ class AntennaArray:
         (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
         if torch_device is not None:
-            return self._get_array_response_torch(az, el, torch_device)
+            array_response = self._get_array_response_torch(az, el, torch_device)
+            return array_response if return_tensor else array_response.cpu().numpy()
 
         # calculate the distance of each element from the first element
         dx = self.coordinates[:, 0] - self.coordinates[0, 0]
@@ -517,7 +522,7 @@ class AntennaArray:
         ).squeeze()
         if self.num_antennas == 1:
             array_response = array_response.reshape(-1, 1)
-        return array_response.cpu().numpy()
+        return array_response
 
     def get_array_gain(self, az, el, db=True, use_deg=True):
         """Returns the array gain at a given azimuth and elevation in dB.
