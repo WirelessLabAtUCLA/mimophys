@@ -449,7 +449,7 @@ class AntennaArray:
     # Get AntennaArray Properties
     ############################
 
-    def get_array_response(self, az=0, el=0):
+    def get_array_response(self, az=0, el=0, torch_device=None):
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
@@ -462,12 +462,16 @@ class AntennaArray:
             Azimuth angle in radians.
         el : float, array_like
             Elevation angle in radians.
+        torch_device : str, optional
+            If given, PyTorch is used to calculate the array response. Default is None.
 
         Returns
         -------
         array_response: The array response vector up to 3 dimensions. The shape of the array is
         (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
+        if torch_device is not None:
+            return self._get_array_response_torch(az, el, torch_device)
 
         # calculate the distance of each element from the first element
         dx = self.coordinates[:, 0] - self.coordinates[0, 0]
@@ -494,6 +498,26 @@ class AntennaArray:
         if self.num_antennas == 1:
             array_response = array_response.reshape(-1, 1)
         return array_response
+
+    def _get_array_response_torch(self, az, el, device):
+        """Use PyTorch to calculate number of responses in parallel."""
+        from torch import as_tensor, cos, exp, sin
+
+        nc = self.coordinates
+        dx = as_tensor(nc[:, 0] - nc[0, 0], device=device).reshape(1, 1, -1)
+        dy = as_tensor(nc[:, 1] - nc[0, 1], device=device).reshape(1, 1, -1)
+        dz = as_tensor(nc[:, 2] - nc[0, 2], device=device).reshape(1, 1, -1)
+
+        az = as_tensor(az, device=device).reshape(-1, 1, 1)
+        el = as_tensor(el, device=device).reshape(1, -1, 1)
+
+        array_response = exp(
+            (1j * 2 * np.pi)
+            * (dx * sin(az) * cos(el) + dy * cos(az) * cos(el) + dz * sin(el))
+        ).squeeze()
+        if self.num_antennas == 1:
+            array_response = array_response.reshape(-1, 1)
+        return array_response.cpu().numpy()
 
     def get_array_gain(self, az, el, db=True, use_deg=True):
         """Returns the array gain at a given azimuth and elevation in dB.
