@@ -38,8 +38,10 @@ class Channel:
         self.rx = rx
         # energy of the channel matrix TO BE REALIZED
         self._energy = self.tx.N * self.rx.N
+        self.channel_matrix = -np.ones((self.rx.N, self.tx.N), dtype=complex)
         self.seed = seed
-        self.channel_matrix = None
+        self.rng = np.random.default_rng(seed)
+
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
         self._carrier_wavelength = self.propagation_velocity / self.carrier_frequency
@@ -86,14 +88,14 @@ class Channel:
     # ========================================================
 
     @abstractmethod
-    def generate_channel_matrix(self):
-        """Generate the channel matrix."""
-        pass
+    def generate_channel_matrix(self, n_channels=1):
+        """Generate multiple channel matrices."""
+        self.rng = np.random.default_rng(self.seed)
 
     @abstractmethod
     def realize(self):
         """Realize the channel."""
-        pass
+        self.rng = np.random.default_rng(self.seed)
 
     @staticmethod
     def normalize_channel(H, energy):
