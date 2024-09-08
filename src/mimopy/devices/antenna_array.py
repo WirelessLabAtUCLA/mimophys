@@ -475,8 +475,7 @@ class AntennaArray:
         (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
         if torch_device is not None:
-            array_response = self._get_array_response_torch(az, el, torch_device)
-            return array_response if return_tensor else array_response.cpu().numpy()
+            return self._get_array_response_torch(az, el, torch_device, return_tensor)
 
         # calculate the distance of each element from the first element
         dx = self.coordinates[:, 0] - self.coordinates[0, 0]
@@ -504,9 +503,10 @@ class AntennaArray:
             array_response = array_response.reshape(-1, 1)
         return array_response
 
-    def _get_array_response_torch(self, az, el, device):
+    def _get_array_response_torch(self, az, el, device, return_tensor=False):
         """Use PyTorch to calculate number of responses in parallel."""
         from torch import as_tensor, cos, exp, sin
+        from torch.cuda import empty_cache
 
         nc = self.coordinates
         dx = as_tensor(nc[:, 0] - nc[0, 0], device=device).reshape(1, 1, -1)
@@ -522,7 +522,14 @@ class AntennaArray:
         ).squeeze()
         if self.num_antennas == 1:
             array_response = array_response.reshape(-1, 1)
-        return array_response
+
+        if return_tensor:
+            return array_response
+
+        np_array_response = array_response.cpu().numpy()
+        del array_response
+        empty_cache()
+        return np_array_response
 
     def get_array_gain(self, az, el, db=True, use_deg=True):
         """Returns the array gain at a given azimuth and elevation in dB.
