@@ -37,7 +37,7 @@ class LoS(Channel):
 
     aod = aoa
 
-    def _compute_H(self, az, el):
+    def generate_channels(self, az, el):
         tx_response = self.tx.get_array_response(az, el)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
         H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())

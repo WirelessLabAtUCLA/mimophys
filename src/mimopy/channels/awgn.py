@@ -88,7 +88,7 @@ class Channel:
     # ========================================================
 
     @abstractmethod
-    def generate_channel_matrix(self, n_channels=1):
+    def generate_channels(self, n_channels=1):
         """Generate multiple channel matrices."""
         self.rng = np.random.default_rng(self.seed)
 

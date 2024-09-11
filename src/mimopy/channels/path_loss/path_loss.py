@@ -49,4 +49,4 @@ class ConstantLoss(PathLoss):
         return 10 * log10(self.loss)
 
     def received_power(self, channel: Channel):
-        return channel.tx.power / self.loss 
+        return channel.tx.power / self.loss

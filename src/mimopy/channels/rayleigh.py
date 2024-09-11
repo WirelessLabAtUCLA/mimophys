@@ -24,13 +24,13 @@ class Rayleigh(Channel):
     ):
         super().__init__(tx, rx, path_loss, *args, **kwargs)
 
-    def generate_channel_matrix(self, n_channels=1):
-        super().generate_channel_matrix(n_channels)
+    def generate_channels(self, n_channels=1):
+        super().generate_channels(n_channels)
         shape = (self.rx.N, self.tx.N)
         energy = self._energy / self.tx.N / self.rx.N
-        Hs = self.rng.normal(0, np.sqrt(energy / 2), (n_channels, *shape, 2))
-        Hs = Hs.view(np.complex128).squeeze()
-        return Hs
+        H = self.rng.normal(0, np.sqrt(energy / 2), (n_channels, *shape, 2))
+        H = H.view(np.complex128).squeeze()
+        return H
 
     def realize(self):
         """Realize the channel. Energy is used to adjusting the expectation of the channel"""
