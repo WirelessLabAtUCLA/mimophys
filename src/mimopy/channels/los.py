@@ -37,9 +37,13 @@ class LoS(Channel):
 
     aod = aoa
 
-    def generate_channels(self, az, el):
+    def generate_channels(self, az, el) -> np.ndarray:
         tx_response = self.tx.get_array_response(az, el)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
+        if len(tx_response.shape) == 1:
+            tx_response = tx_response.reshape(1, -1)
+        if len(rx_response.shape) == 1:
+            rx_response = rx_response.reshape(1, -1)
         H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())
         return H
 
