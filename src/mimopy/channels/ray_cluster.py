@@ -117,11 +117,13 @@ class RayClusterChannel(Channel):
         torch.cuda.empty_cache()
         return H
 
-    def generate_channels(self, n_channels=1, use_torch=False):
+    def generate_channels(self, n_channels=1, use_torch=False, return_params=False):
         cluster_aoa, cluster_aod = self.generate_cluster_angles(n_channels)
         aoa, aod = self.generate_ray_angles(cluster_aoa, cluster_aod)
         ray_gain = self.generate_ray_gain(aoa)
         H = self.generate_channel_matrix(aoa, aod, ray_gain, use_torch)
+        if return_params:
+            return H, cluster_aoa, cluster_aod, aoa, aod, ray_gain
         return H
 
     def realize(self):
