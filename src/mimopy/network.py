@@ -184,7 +184,7 @@ class Network:
             link = self.links[link]
         if isinstance(link, Iterable):
             return {lk: self.snr(lk, db) for lk in link}
-        return link.signal_power_db if db else link.signal_power
+        return link.signal_power_dbm if db else link.signal_power
 
     def bf_noise_power(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the noise power after beamforming in dBm."""
@@ -194,7 +194,7 @@ class Network:
             link = self.links[link]
         if isinstance(link, Iterable):
             return {lk: self.snr(lk, db=db) for lk in link}
-        return link.bf_noise_power_db if db else link.rx.noise
+        return link.bf_noise_power_dbm if db else link.rx._noise_power
 
     def snr(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the signal-to-noise ratio (SNR) of the link."""
@@ -277,7 +277,7 @@ class Network:
         for ul in self.connections[link.rx]["ul"]:
             if ul != link:
                 sig_pow_nb += ul.rx_power * ul.tx.N * ul.rx.N
-        inr_ub = sig_pow_nb / link.rx.noise
+        inr_ub = sig_pow_nb / link.rx._noise_power
         return 10 * log10(inr_ub + np.finfo(float).tiny) if db else inr_ub
 
     # ===================================================================

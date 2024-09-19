@@ -5,6 +5,7 @@ import numpy as np
 import numpy.linalg as LA
 from matplotlib import cm
 from numpy import log10
+from numpy.typing import ArrayLike
 
 
 class AntennaArray:
@@ -21,19 +22,37 @@ class AntennaArray:
         unit weight.
     """
 
-    def __init__(self, N: int, coordinates: Iterable = [0, 0, 0], **kwargs):
+    def __init__(
+        self,
+        N: int,
+        coordinates: ArrayLike = [0, 0, 0],
+        power: float = 1,
+        noise_power: float = 0,
+        power_dbm: float | None = None,
+        noise_power_dbm: float | None = None,
+        name: str = "AntennaArray",
+        weights: ArrayLike | None = None,
+        frequency: float = 1e9,
+        marker: str = "o",
+    ):
         self.num_antennas = N
         self.coordinates = np.array(coordinates)
-        self.weights = np.ones(N)
-        self.marker = "o"
-        self.power = 1
-        self.noise_db = 0
-        self.name = "AntennaArray"
-        self.spacing = 0.5
-        self.frequency = 1e9
+        self.weights = np.ones(N) if weights is None else np.array(weights)
+        self.name = name
+        self.frequency = frequency
         self._config = f"({N} elm)"
-        for kwarg in kwargs:
-            self.__setattr__(kwarg, kwargs[kwarg])
+        self.marker = marker
+
+        # Power and noise power
+        if power_dbm is not None:
+            self.power_dbm = power_dbm
+        else:
+            self.power = power
+
+        if noise_power_dbm is not None:
+            self.noise_power_dbm = noise_power_dbm
+        else:
+            self.noise_power = noise_power
 
     N = Nr = Nt = property(lambda self: self.num_antennas)
 
@@ -46,18 +65,26 @@ class AntennaArray:
     def __len__(self):
         return self.num_antennas
 
+    # safe power properties for numerical stability
     @property
-    def amp(self):
-        return np.abs(self.weights)
+    def _noise_power(self):
+        return self.noise_power if self.noise_power > 0 else np.finfo(float).tiny
 
-    @property
-    def phase(self):
-        return np.angle(self.weights)
+    power_dbm = property(lambda self: 10 * np.log10(self.power))
+    noise_power_dbm = property(lambda self: 10 * np.log10(self._noise_power))
 
-    @property
-    def array_center(self):
-        """Returns the center of the array."""
-        return np.mean(self.coordinates, axis=0)
+    @power_dbm.setter
+    def power_dbm(self, power_dbm):
+        self.power = 10 ** (power_dbm / 10)
+
+    @noise_power_dbm.setter
+    def noise_power_dbm(self, noise_power_dbm):
+        self.noise_power = 10 ** (noise_power_dbm / 10)
+
+    amp = property(lambda self: np.abs(self.weights))
+    phase = property(lambda self: np.angle(self.weights))
+    array_center = property(lambda self: np.mean(self.coordinates, axis=0))
+    location = property(lambda self: np.mean(self.coordinates, axis=0))
 
     @array_center.setter
     def array_center(self, center):
@@ -65,10 +92,11 @@ class AntennaArray:
         delta_center = center - self.array_center
         self.coordinates += delta_center
 
-    @property
-    def location(self):
-        """Returns the location of the array. default is the center of the array."""
-        return np.mean(self.coordinates, axis=0)
+    @location.setter
+    def location(self, location):
+        """Set the location of the array."""
+        delta_location = location - self.location
+        self.coordinates += delta_location
 
     @property
     def diameter(self):
@@ -78,19 +106,11 @@ class AntennaArray:
         Dz = np.max(self.coordinates[:, 2]) - np.min(self.coordinates[:, 2])
         return np.sqrt(Dx**2 + Dy**2 + Dz**2)
 
-    @location.setter
-    def location(self, location):
-        """Set the location of the array."""
-        delta_location = location - self.location
-        self.coordinates += delta_location
-
-    @property
-    def noise(self):
-        return 10 ** (self.noise_db / 10)
-
-    @noise.setter
-    def noise(self, noise):
-        self.noise_db = 10 * log10(noise + np.finfo(float).tiny)
+    @diameter.setter
+    def diameter(self, diameter):
+        """Set the diameter of the array by scaling the coordinates."""
+        scale = diameter / self.diameter
+        self.coordinates *= scale
 
     @classmethod
     def ula(
@@ -121,30 +141,23 @@ class AntennaArray:
         if ax == "x":
             coordinates = np.array([np.arange(N), np.zeros(N), np.zeros(N)]).T
         elif ax == "y":
-            coordinates = np.array(
-                [
-                    np.zeros(N),
-                    np.arange(N),
-                    np.zeros(N),
-                ]
-            ).T
+            coordinates = np.array([np.zeros(N), np.arange(N), np.zeros(N)]).T
         elif ax == "z":
-            coordinates = np.array(
-                [
-                    np.zeros(N),
-                    np.zeros(N),
-                    np.arange(N),
-                ]
-            ).T
+            coordinates = np.array([np.zeros(N), np.zeros(N), np.arange(N)]).T
         else:
-            raise ValueError("ax must be 'x', 'y' or 'z'")
-        ula = cls(N, coordinates * spacing)
+            raise ValueError("axis must be 'x', 'y' or 'z'")
+        ula = cls(N, coordinates * spacing, **kwargs)
         ula.array_center = array_center
+
         config_map = {"x": f"({N}11)", "y": f"(1{N}1)", "z": f"(11{N})"}
         ula._config = config_map[ax]
-        for kwarg in kwargs:
-            ula.__setattr__(kwarg, kwargs[kwarg])
+
         return ula
+
+        # for kwarg in kwargs:
+        #     ula.__setattr__(kwarg, kwargs[kwarg])
+        # return ula
+        # ula = cls(N, coordinates * spacing, **kwargs)
 
     initialize_ula = ula
 
@@ -755,6 +768,7 @@ class AntennaArray:
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
+        plt.tight_layout()
         plt.show()
 
     def plot_array(self, plane="xy", ax=None):
