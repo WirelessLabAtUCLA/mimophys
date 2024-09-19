@@ -1,13 +1,12 @@
-from typing import List, Dict, Optional
 from collections.abc import Iterable
-from dataclasses import dataclass
+from typing import Dict, List, Optional
 
-import numpy as np
-from numpy import log10, log2
-
-from .devices.antenna_array import AntennaArray
-from .channels import Channel
 import matplotlib.pyplot as plt
+import numpy as np
+from numpy import log2, log10
+
+from .channels import Channel
+from .devices.antenna_array import AntennaArray
 
 
 class Network:
@@ -195,7 +194,7 @@ class Network:
             link = self.links[link]
         if isinstance(link, Iterable):
             return {lk: self.snr(lk, db=db) for lk in link}
-        return link.bf_noise_power_db if db else link.bf_noise_power
+        return link.bf_noise_power_db if db else link.rx.noise
 
     def snr(self, link: Optional[Channel | str] = None, db=True) -> float:
         """Get the signal-to-noise ratio (SNR) of the link."""

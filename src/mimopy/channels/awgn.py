@@ -127,7 +127,7 @@ class Channel:
     @property
     def bf_noise_power_db(self) -> float:
         """Noise power after beamforming in dBm."""
-        return 10 * log10(self.bf_noise_power + np.finfo(float).tiny)
+        return 10 * log10(self.rx.noise + np.finfo(float).tiny)
 
     @property
     def bf_gain(self) -> float:
@@ -157,7 +157,7 @@ class Channel:
     @property
     def snr(self) -> float:
         """Signal-to-noise ratio (SNR) in linear scale."""
-        return float(self.rx_power * self.bf_gain / self.bf_noise_power)
+        return float(self.rx_power * self.bf_gain / self.rx.noise)
 
     @property
     def snr_db(self) -> float:
@@ -168,6 +168,11 @@ class Channel:
     def capacity(self) -> float:
         """Channel capacity in bps/Hz."""
         return log2(1 + self.snr_upper_bound)
+
+    @property
+    def gain_upper_bound(self) -> float:
+        """return the gain upper bound based on MRC+MRT with line-of-sight channel"""
+        return self.tx.N * self.rx.N
 
     @property
     def snr_upper_bound(self) -> float:
