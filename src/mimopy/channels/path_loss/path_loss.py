@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from numpy import log10
 from typing import TYPE_CHECKING
+
+from numpy import log10
 
 if TYPE_CHECKING:
     from ..awgn import Channel
@@ -47,4 +49,4 @@ class ConstantLoss(PathLoss):
         return 10 * log10(self.loss)
 
     def received_power(self, channel: Channel):
-        return channel.tx.power / self.loss 
+        return channel.tx.power / self.loss

@@ -1,7 +1,8 @@
 import numpy as np
-from .awgn import Channel
+
 from ..devices import AntennaArray
-from .path_loss import get_path_loss
+from .awgn import Channel
+from .path_loss import PathLoss
 
 
 class Rayleigh(Channel):
@@ -14,16 +15,31 @@ class Rayleigh(Channel):
     """
 
     def __init__(
-        self, tx: AntennaArray, rx: AntennaArray, path_loss="no_loss", *args, **kwargs
+        self,
+        tx: AntennaArray,
+        rx: AntennaArray,
+        path_loss: str | PathLoss = "no_loss",
+        *args,
+        **kwargs,
     ):
         super().__init__(tx, rx, path_loss, *args, **kwargs)
 
+    def generate_channels(self, n_channels=1):
+        super().generate_channels(n_channels)
+        shape = (self.rx.N, self.tx.N)
+        energy = self._energy / self.tx.N / self.rx.N
+        H = self.rng.normal(0, np.sqrt(energy / 2), (n_channels, *shape, 2))
+        H = H.view(np.complex128).squeeze()
+        return H
+
     def realize(self):
         """Realize the channel. Energy is used to adjusting the expectation of the channel"""
-        np.random.seed(self.seed)
+        super().realize()
         energy = self._energy / self.tx.N / self.rx.N
         shape = (self.rx.N, self.tx.N)
-        self.channel_matrix = np.sqrt(energy / 2) * (
-            np.random.randn(*shape) + 1j * np.random.randn(*shape)
-        )
+        # self.channel_matrix = np.sqrt(energy / 2) * (
+        #     np.random.randn(*shape) + 1j * np.random.randn(*shape)
+        # )
+        self.channel_matrix = self.rng.normal(0, np.sqrt(energy / 2), (*shape, 2))
+        self.channel_matrix = self.channel_matrix.view(np.complex128).squeeze()
         return self

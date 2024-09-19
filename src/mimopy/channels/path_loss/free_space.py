@@ -1,7 +1,8 @@
 from numpy import pi
+
+from ...utils.geometry import relative_position
 from ..awgn import Channel
 from .path_loss import PathLoss
-from ...utils.geometry import relative_position
 
 
 class FreeSpaceLoss(PathLoss):
@@ -9,7 +10,8 @@ class FreeSpaceLoss(PathLoss):
 
     def __str__(self) -> str:
         return "Free-space loss"
-    def received_power(self, channel:Channel):
+
+    def received_power(self, channel: Channel):
         """
         Calculate the received power at the receiver.
 
@@ -18,4 +20,4 @@ class FreeSpaceLoss(PathLoss):
         """
         d, _, _ = relative_position(channel.tx.location, channel.rx.location)
         # the distance is calculated in wavelength so the wl term is not needed
-        return channel.tx.power / (16 * pi ** 2 * d**2)
+        return channel.tx.power / (16 * pi**2 * d**2)

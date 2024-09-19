@@ -5,7 +5,7 @@ import numpy.linalg as LA
 from numpy import log2, log10
 
 from ..devices.antenna_array import AntennaArray
-from .path_loss import get_path_loss
+from .path_loss import PathLoss, get_path_loss
 
 
 class Channel:
@@ -27,8 +27,8 @@ class Channel:
         self,
         tx: AntennaArray,
         rx: AntennaArray,
-        path_loss="no_loss",
-        seed=None,
+        path_loss: str | PathLoss = "no_loss",
+        seed: int = None,
         *args,
         **kwargs,
     ):
@@ -36,14 +36,21 @@ class Channel:
         self.name = self.__class__.__name__
         self.tx = tx
         self.rx = rx
-        self.path_loss = get_path_loss(path_loss)
         # energy of the channel matrix TO BE REALIZED
         self._energy = self.tx.N * self.rx.N
+        self.channel_matrix = -np.ones((self.rx.N, self.tx.N), dtype=complex)
         self.seed = seed
-        self.channel_matrix = None
+        self.rng = np.random.default_rng(seed)
+
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
         self._carrier_wavelength = self.propagation_velocity / self.carrier_frequency
+        if isinstance(path_loss, str):
+            self.path_loss = get_path_loss(path_loss)
+        elif isinstance(path_loss, PathLoss):
+            self.path_loss = path_loss
+        else:
+            raise ValueError("path_loss must be a string or PathLoss object.")
 
         for kw, arg in kwargs.items():
             setattr(self, kw, arg)
@@ -81,14 +88,25 @@ class Channel:
     # ========================================================
 
     @abstractmethod
+    def generate_channels(self, n_channels=1):
+        """Generate multiple channel matrices."""
+        self.rng = np.random.default_rng(self.seed)
+
+    @abstractmethod
     def realize(self):
         """Realize the channel."""
-        pass
+        self.rng = np.random.default_rng(self.seed)
+
+    @staticmethod
+    def normalize_channel(H, energy):
+        """Normalize the channel energy."""
+        H = np.sqrt(energy) * H / LA.norm(H, "fro")
+        return H
 
     def normalize_energy(self, energy):
         """Normalize the channel energy."""
         if energy is not None:
-            self.H = np.sqrt(energy) * self.H / LA.norm(self.H, "fro")
+            self.H = self.normalize_channel(self.H, energy)
         return self.H
 
     # ========================================================
@@ -104,12 +122,12 @@ class Channel:
         """Noise power after beamforming combining in linear scale."""
         # w = self.rx.weights.flatten()
         # return float(LA.norm(w) ** 2 * self.rx.noise_power_lin)
-        return float(self.rx.noise)
+        return float(self.rx._noise_power)
 
     @property
-    def bf_noise_power_db(self) -> float:
+    def bf_noise_power_dbm(self) -> float:
         """Noise power after beamforming in dBm."""
-        return 10 * log10(self.bf_noise_power + np.finfo(float).tiny)
+        return 10 * log10(self.rx._noise_power + np.finfo(float).tiny)
 
     @property
     def bf_gain(self) -> float:
@@ -132,14 +150,14 @@ class Channel:
         return self.rx_power * self.bf_gain
 
     @property
-    def signal_power_db(self) -> float:
+    def signal_power_dbm(self) -> float:
         """Normalized signal power after beamforming in dBm."""
         return 10 * log10(self.signal_power + np.finfo(float).tiny)
 
     @property
     def snr(self) -> float:
         """Signal-to-noise ratio (SNR) in linear scale."""
-        return float(self.rx_power * self.bf_gain / self.bf_noise_power)
+        return float(self.rx_power * self.bf_gain / self.rx._noise_power)
 
     @property
     def snr_db(self) -> float:
@@ -152,9 +170,14 @@ class Channel:
         return log2(1 + self.snr_upper_bound)
 
     @property
+    def gain_upper_bound(self) -> float:
+        """return the gain upper bound based on MRC+MRT with line-of-sight channel"""
+        return self.tx.N * self.rx.N
+
+    @property
     def snr_upper_bound(self) -> float:
         """return the SNR upper bound based on MRC+MRT with line-of-sight channel"""
-        return self.rx_power * self.tx.N * self.rx.N / self.rx.noise
+        return self.rx_power * self.tx.N * self.rx.N / self.rx._noise_power
 
     @property
     def snr_upper_bound_db(self) -> float:
@@ -169,16 +192,16 @@ class Channel:
     def signal_power(self, _):
         self._cant_be_set()
 
-    @signal_power_db.setter
-    def signal_power_db(self, _):
+    @signal_power_dbm.setter
+    def signal_power_dbm(self, _):
         self._cant_be_set()
 
     @bf_noise_power.setter
     def bf_noise_power(self, _):
         self._cant_be_set()
 
-    @bf_noise_power_db.setter
-    def bf_noise_power_db(self, _):
+    @bf_noise_power_dbm.setter
+    def bf_noise_power_dbm(self, _):
         self._cant_be_set()
 
     @snr.setter

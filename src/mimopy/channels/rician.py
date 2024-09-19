@@ -1,9 +1,11 @@
 import numpy as np
+
+from ..devices import AntennaArray
 from .awgn import Channel
 from .los import LoS
-from .spherical_wave import SphericalWave
+from .path_loss import PathLoss
 from .rayleigh import Rayleigh
-from .path_loss import get_path_loss
+from .spherical_wave import SphericalWave
 
 
 class Rician(Channel):
@@ -18,11 +20,11 @@ class Rician(Channel):
 
     def __init__(
         self,
-        tx,
-        rx,
-        path_loss="no_loss",
-        K=10,
-        nearfield=False,
+        tx: AntennaArray,
+        rx: AntennaArray,
+        path_loss: str | PathLoss = "no_loss",
+        K: float = 10,
+        nearfield: bool = False,
         *args,
         **kwargs,
     ):
@@ -30,19 +32,24 @@ class Rician(Channel):
         self.K = 10 ** (K / 10)  # Convert K-factor to linear scale
         self.nearfield = nearfield
         if nearfield:
-            self.los = SphericalWave(tx, rx, path_loss)
+            self.los = SphericalWave(tx, rx, path_loss, seed=self.seed)
         else:
-            self.los = LoS(tx, rx, path_loss)
+            self.los = LoS(tx, rx, path_loss, seed=self.seed)
         self.nlos = Rayleigh(tx, rx, path_loss, seed=self.seed)
+
+    def generate_channels(self, n_channels=1):
+        """Generate multiple channel matrices with static LoS component."""
+        H_los = self.los.realize().H
+        H_nlos = self.nlos.generate_channels(n_channels)
+        return (
+            np.sqrt(self.K / (self.K + 1)) * H_los + np.sqrt(1 / (self.K + 1)) * H_nlos
+        )
 
     def realize(self):
         """Realize the channel."""
         self.los.realize()
-
-        np.random.seed(self.seed)
-        self.nlos.seed = self.seed
         self.nlos.realize()
-        
+
         self.channel_matrix = (
             np.sqrt(self.K / (self.K + 1)) * self.los.H
             + np.sqrt(1 / (self.K + 1)) * self.nlos.H
