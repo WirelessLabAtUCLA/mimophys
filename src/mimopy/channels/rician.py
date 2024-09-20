@@ -32,10 +32,10 @@ class Rician(Channel):
         self.K = 10 ** (K / 10)  # Convert K-factor to linear scale
         self.nearfield = nearfield
         if nearfield:
-            self.los = SphericalWave(tx, rx, path_loss, seed=self.seed)
+            self.los = SphericalWave(tx, rx, path_loss, seed=self._seed)
         else:
-            self.los = LoS(tx, rx, path_loss, seed=self.seed)
-        self.nlos = Rayleigh(tx, rx, path_loss, seed=self.seed)
+            self.los = LoS(tx, rx, path_loss, seed=self._seed)
+        self.nlos = Rayleigh(tx, rx, path_loss, seed=self._seed)
 
     def generate_channels(self, n_channels=1):
         """Generate multiple channel matrices with static LoS component."""
