@@ -5,7 +5,7 @@ from .awgn import Channel
 from .path_loss import PathLoss
 
 
-class SphericalWave(Channel):
+class SphericalWaveChannel(Channel):
     """Spherical wave channel."""
 
     def __init__(
@@ -17,7 +17,7 @@ class SphericalWave(Channel):
     ):
         super().__init__(tx, rx, path_loss, **kwargs)
 
-    def realize(self) -> "SphericalWave":
+    def realize(self) -> "SphericalWaveChannel":
         """Realize the channel."""
         tc = self.tx.coordinates
         rc = self.rx.coordinates
@@ -30,3 +30,15 @@ class SphericalWave(Channel):
         self.channel_matrix = np.exp(1j * phase_shift).T.conj()
         self.normalize_energy(self._energy)
         return self
+    
+# add alias with deprecat warning
+class SphericalWave(SphericalWaveChannel):
+    def __init__(self, *args, **kwargs):
+        import warnings
+
+        warnings.warn(
+            "SphericalWave is deprecated, use SphericalWaveChannel instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

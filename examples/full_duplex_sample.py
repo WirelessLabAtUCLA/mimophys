@@ -3,7 +3,7 @@
 import numpy as np
 
 from mimopy import AntennaArray, Network
-from mimopy.channels import LoS, SphericalWave
+from mimopy.channels import LoSChannel, SphericalWaveChannel
 from mimopy.channels.path_loss import ConstantLoss
 
 # Number of transmit antennas at the base station
@@ -42,12 +42,14 @@ uerx = AntennaArray.ula(
 )
 
 # Define the uplink and downlink channel as a line-of-sight (LoS) channel
-ul = LoS(uetx, rx, name="ul")
-dl = LoS(tx, uerx, name="dl")
+ul = LoSChannel(uetx, rx, name="ul")
+dl = LoSChannel(tx, uerx, name="dl")
 
 # Define the self-interference channel as a Rician channel with near-field LoS component
 # and far-field isotropic scattering component. Set the path loss to a constant value of -20 dB
-si = SphericalWave(tx, rx, K=10, nearfield=True, name="si", path_loss=ConstantLoss(-20))
+si = SphericalWaveChannel(
+    tx, rx, K=10, nearfield=True, name="si", path_loss=ConstantLoss(-20)
+)
 
 # Create a network named "FD Network"
 net = Network("FD Network")

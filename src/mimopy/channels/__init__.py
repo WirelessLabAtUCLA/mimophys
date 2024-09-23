@@ -1,8 +1,15 @@
 from .awgn import Channel
-from .los import LoS
+from .los import LoSChannel
 from .ray_cluster import RayClusterChannel
-from .rayleigh import Rayleigh
-from .rician import Rician
-from .spherical_wave import SphericalWave
+from .rayleigh import RayleighChannel
+from .rician import RicianChannel
+from .spherical_wave import SphericalWaveChannel
 
-__all__ = ["Channel", "LoS", "Rayleigh", "Rician", "SphericalWave", "RayClusterChannel"]
+__all__ = [
+    "Channel",
+    "LoSChannel",
+    "RayleighChannel",
+    "RicianChannel",
+    "SphericalWaveChannel",
+    "RayClusterChannel",
+]

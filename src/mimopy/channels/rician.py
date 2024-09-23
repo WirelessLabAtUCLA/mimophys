@@ -2,13 +2,13 @@ import numpy as np
 
 from ..devices import AntennaArray
 from .awgn import Channel
-from .los import LoS
+from .los import LoSChannel
 from .path_loss import PathLoss
-from .rayleigh import Rayleigh
-from .spherical_wave import SphericalWave
+from .rayleigh import RayleighChannel
+from .spherical_wave import SphericalWaveChannel
 
 
-class Rician(Channel):
+class RicianChannel(Channel):
     """Rician channel class.
 
     Unique Attributes
@@ -32,10 +32,10 @@ class Rician(Channel):
         self.K = 10 ** (K / 10)  # Convert K-factor to linear scale
         self.nearfield = nearfield
         if nearfield:
-            self.los = SphericalWave(tx, rx, path_loss, seed=self.seed)
+            self.los = SphericalWaveChannel(tx, rx, path_loss, seed=self.seed)
         else:
-            self.los = LoS(tx, rx, path_loss, seed=self.seed)
-        self.nlos = Rayleigh(tx, rx, path_loss, seed=self.seed)
+            self.los = LoSChannel(tx, rx, path_loss, seed=self.seed)
+        self.nlos = RayleighChannel(tx, rx, path_loss, seed=self.seed)
 
     def generate_channels(self, n_channels=1):
         """Generate multiple channel matrices with static LoS component."""
@@ -55,3 +55,14 @@ class Rician(Channel):
             + np.sqrt(1 / (self.K + 1)) * self.nlos.H
         )
         return self
+
+# add alias with deprecat warning
+class Rician(RicianChannel):
+    def __init__(self, *args, **kwargs):
+        import warnings
+
+        warnings.warn(
+            "Rician class has been renamed to RicianChannel. Please use RicianChannel instead.",
+            DeprecationWarning,
+        )
+        super().__init__(*args, **kwargs)

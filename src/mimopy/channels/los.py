@@ -6,7 +6,7 @@ from .awgn import Channel
 from .path_loss import PathLoss
 
 
-class LoS(Channel):
+class LoSChannel(Channel):
     """Line-of-sight channel class.
 
     Unique Attributes
@@ -47,7 +47,7 @@ class LoS(Channel):
         H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())
         return H
 
-    def realize(self) -> "LoS":
+    def realize(self) -> "LoSChannel":
         """Realize the channel."""
         # TODO: warning if channel matrix not updated/realized
         _, az, el = relative_position(self.tx.array_center, self.rx.array_center)
@@ -56,3 +56,15 @@ class LoS(Channel):
         self.H = np.outer(rx_response, tx_response.conj())
         self.normalize_energy(self._energy)
         return self
+
+# add alias with deprecat warning
+class LoS(LoSChannel):
+    def __init__(self, *args, **kwargs):
+        import warnings
+
+        warnings.warn(
+            "LoS is deprecated, use LoSChannel instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

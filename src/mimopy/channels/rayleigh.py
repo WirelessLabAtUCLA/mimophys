@@ -5,7 +5,7 @@ from .awgn import Channel
 from .path_loss import PathLoss
 
 
-class Rayleigh(Channel):
+class RayleighChannel(Channel):
     """Rayleigh channel class.
 
     Unique Attributes
@@ -43,3 +43,15 @@ class Rayleigh(Channel):
         self.channel_matrix = self.rng.normal(0, np.sqrt(energy / 2), (*shape, 2))
         self.channel_matrix = self.channel_matrix.view(np.complex128).squeeze()
         return self
+
+# add alias with deprecat warning
+class Rayleigh(RayleighChannel):
+    def __init__(self, *args, **kwargs):
+        import warnings
+
+        warnings.warn(
+            "Rayleigh is deprecated, use RayleighChannel instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
