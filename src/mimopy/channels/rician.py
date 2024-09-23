@@ -37,13 +37,14 @@ class RicianChannel(Channel):
             self.los = LoSChannel(tx, rx, path_loss, seed=self.seed)
         self.nlos = RayleighChannel(tx, rx, path_loss, seed=self.seed)
 
-    def generate_channels(self, n_channels=1):
+    def generate_channels(self, n_channels=1, return_subchannels=False):
         """Generate multiple channel matrices with static LoS component."""
         H_los = self.los.realize().H
         H_nlos = self.nlos.generate_channels(n_channels)
-        return (
-            np.sqrt(self.K / (self.K + 1)) * H_los + np.sqrt(1 / (self.K + 1)) * H_nlos
-        )
+        H = np.sqrt(self.K / (self.K + 1)) * H_los + np.sqrt(1 / (self.K + 1)) * H_nlos
+        if return_subchannels:
+            return H, H_los, H_nlos
+        return H
 
     def realize(self):
         """Realize the channel."""
