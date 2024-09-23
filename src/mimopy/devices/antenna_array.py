@@ -100,6 +100,10 @@ class AntennaArray:
         delta_location = location - self.location
         self.coordinates += delta_location
 
+    coord_x = property(lambda self: self.coordinates[:, 0])
+    coord_y = property(lambda self: self.coordinates[:, 1])
+    coord_z = property(lambda self: self.coordinates[:, 2])
+
     @property
     def diameter(self):
         """Returns the diameter of the array."""
