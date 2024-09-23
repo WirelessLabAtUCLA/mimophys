@@ -63,7 +63,7 @@ class Channel:
 
     def seed(self, seed):
         self._seed = seed
-        self.rng = np.random.default_rng(seed)
+        self.rng = np.random.default_rng(self._seed)
 
     H = property(lambda self: self.channel_matrix)
 
