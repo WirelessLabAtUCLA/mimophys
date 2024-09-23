@@ -7,6 +7,8 @@ from matplotlib import cm
 from numpy import log10
 from numpy.typing import ArrayLike
 
+"""Azimuth 0 is along the x-axis, elevation 0 is in the x-y plane."""
+
 
 class AntennaArray:
     """Base class for array objects.
@@ -161,6 +163,7 @@ class AntennaArray:
 
     initialize_ula = ula
 
+    # TODO: fix the upa method
     @classmethod
     def upa(
         cls,
@@ -462,7 +465,9 @@ class AntennaArray:
     # Get AntennaArray Properties
     ############################
 
-    def get_array_response(self, az=0, el=0, torch_device=None, return_tensor=False):
+    def get_array_response(
+        self, az=0, el=0, grid=True, torch_device=None, return_tensor=False
+    ):
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
@@ -475,6 +480,11 @@ class AntennaArray:
             Azimuth angle in radians.
         el : float, array_like
             Elevation angle in radians.
+        grid : bool, optional
+            If True, then the array response is calculated for all combinations of
+            azimuth and elevation angles.
+            Otherwise, the array response is calculated for the given azimuth and elevation
+            pair. (their dimensions must match)
         torch_device : str, optional
             If given, PyTorch is used to calculate the array response. Default is None.
         return_tensor : bool, optional
@@ -494,12 +504,13 @@ class AntennaArray:
         dx = self.coordinates[:, 0] - self.coordinates[0, 0]
         dy = self.coordinates[:, 1] - self.coordinates[0, 1]
         dz = self.coordinates[:, 2] - self.coordinates[0, 2]
+        dx = dx[np.newaxis, np.newaxis, :]
+        dy = dy[np.newaxis, np.newaxis, :]
+        dz = dz[np.newaxis, np.newaxis, :]
 
-        dx = np.expand_dims(dx, (0, 1))
-        dy = np.expand_dims(dy, (0, 1))
-        dz = np.expand_dims(dz, (0, 1))
-        az = np.expand_dims(np.asarray(az).flatten(), (1, 2))
-        el = np.expand_dims(np.asarray(el).flatten(), (0, 2))
+        el_shape = (1, -1, 1) if grid else (-1, 1, 1)
+        el = np.array(el).reshape(*el_shape)
+        az = np.array(az).reshape(-1, 1, 1)
 
         array_response = np.exp(
             1j
@@ -822,3 +833,79 @@ class AntennaArray:
     def plot_3d(self, **kwargs):
         """Plot the array in 3D."""
         return self.plot_array_3d(**kwargs)
+
+
+def plot_arrays_3d(*arrays, **kwargs):
+    """Plot multiple arrays in 3D.
+
+    Parameters
+    ----------
+    *arrays : AntennaArray
+        List of arrays to be plotted.
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    for array in arrays:
+        ax.scatter(
+            array.coordinates[:, 0],
+            array.coordinates[:, 1],
+            array.coordinates[:, 2],
+            marker=array.marker,
+            label=array.name,
+            **kwargs,
+        )
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_arrays(*arrays, plane="xy", **kwargs):
+    """Plot multiple arrays in 2D projection.
+
+    Parameters
+    ----------
+    *arrays : AntennaArray
+        List of arrays to be plotted.
+    """
+    fig, ax = plt.subplots(**kwargs)
+    if plane == "xy":
+        for array in arrays:
+            ax.scatter(
+                array.coordinates[:, 0],
+                array.coordinates[:, 1],
+                marker=array.marker,
+                label=array.name,
+            )
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+    elif plane == "yz":
+        for array in arrays:
+            ax.scatter(
+                array.coordinates[:, 1],
+                array.coordinates[:, 2],
+                marker=array.marker,
+                label=array.name,
+            )
+        ax.set_xlabel("y")
+        ax.set_ylabel("z")
+    elif plane == "xz":
+        for array in arrays:
+            ax.scatter(
+                array.coordinates[:, 0],
+                array.coordinates[:, 2],
+                marker=array.marker,
+                label=array.name,
+            )
+        ax.set_xlabel("x")
+        ax.set_ylabel("z")
+    else:
+        raise ValueError("plane must be 'xy', 'yz' or 'xz'")
+
+    ax.grid(True)
+    ax.set_title(r"AntennaArray Projection in {}-plane".format(plane))
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
