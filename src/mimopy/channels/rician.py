@@ -56,7 +56,7 @@ class RicianChannel(Channel):
         )
         return self
 
-# add alias with deprecat warning
+# add alias with deprecate warning
 class Rician(RicianChannel):
     def __init__(self, *args, **kwargs):
         import warnings
