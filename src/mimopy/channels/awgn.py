@@ -39,8 +39,7 @@ class Channel:
         # energy of the channel matrix TO BE REALIZED
         self._energy = self.tx.N * self.rx.N
         self.channel_matrix = -np.ones((self.rx.N, self.tx.N), dtype=complex)
-        self._seed = seed
-        self.rng = np.random.default_rng(seed)
+        self.seed = seed
 
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
@@ -61,6 +60,9 @@ class Channel:
     def __repr__(self):
         return f"{self.name} ({self.__class__.__name__})"
 
+    seed = property(lambda self: self._seed)
+
+    @seed.setter
     def seed(self, seed):
         self._seed = seed
         self.rng = np.random.default_rng(self._seed)
