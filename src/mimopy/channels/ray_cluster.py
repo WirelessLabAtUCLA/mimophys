@@ -48,10 +48,7 @@ class RayClusterChannel(Channel):
             self._n_rays = np.full(self.n_clusters, n_rays)
         else:
             self._n_rays = np.array(n_rays)
-            if n_rays.size != self.n_clusters:
-                raise ValueError(
-                    f"Number of rays must be an integer or an array of size {self.n_clusters}"
-                )
+            self.n_clusters = len(self._n_rays)
 
     def generate_cluster_angles(self, n_channels) -> np.ndarray:
         """Generate AoA and AoD of the cluster centers.
