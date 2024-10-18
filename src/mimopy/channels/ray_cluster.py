@@ -117,10 +117,10 @@ class RayClusterChannel(Channel):
         aoa_az, aoa_el = aoa[..., 0], aoa[..., 1]
         aod_az, aod_el = aod[..., 0], aod[..., 1]
         arx = self.rx.get_array_response(
-            aoa, 0, self.device, grid=False, return_tensor=True
+            aoa_az, aoa_el, torch_device=self.device, grid=False, return_tensor=True
         )
         atx = self.tx.get_array_response(
-            aod, 0, self.device, grid=False, return_tensor=True
+            aod_az, aod_el, torch_device=self.device, grid=False, return_tensor=True
         )
         arx = arx.reshape(*aoa.shape, -1)
         atx = atx.reshape(*aod.shape, -1)
