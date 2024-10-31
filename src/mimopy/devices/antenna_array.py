@@ -7,7 +7,11 @@ from matplotlib import cm
 from numpy import log10
 from numpy.typing import ArrayLike
 
-"""Azimuth 0 is along the x-axis, elevation 0 is in the x-y plane."""
+"""Azimuth 0 is along the y-axis, elevation 0 is in the x-y plane. (update 2024.10.30)
+    x = r * sin(theta) * cos(phi)
+    y = r * cos(theta) * cos(phi)
+    z = r * sin(phi)
+"""
 
 
 class AntennaArray:
@@ -469,9 +473,7 @@ class AntennaArray:
     # Get AntennaArray Properties
     ############################
 
-    def get_array_response(
-        self, az=0, el=0, grid=True, torch_device=None, return_tensor=False
-    ):
+    def get_array_response(self, az=0, el=0, grid=True):
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
@@ -501,13 +503,11 @@ class AntennaArray:
         array_response: The array response vector up to 3 dimensions. The shape of the array is
         (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
-        if torch_device is not None:
-            return self._get_array_response_torch(az, el, torch_device, return_tensor)
-
         # calculate the distance of each element from the first element
         dx = self.coordinates[:, 0] - self.coordinates[0, 0]
         dy = self.coordinates[:, 1] - self.coordinates[0, 1]
         dz = self.coordinates[:, 2] - self.coordinates[0, 2]
+
         dx = dx[np.newaxis, np.newaxis, :]
         dy = dy[np.newaxis, np.newaxis, :]
         dz = dz[np.newaxis, np.newaxis, :]
@@ -517,9 +517,7 @@ class AntennaArray:
         az = np.array(az).reshape(-1, 1, 1)
 
         array_response = np.exp(
-            1j
-            * 2
-            * np.pi
+            (1j * 2 * np.pi)
             * (
                 dx * np.sin(az) * np.cos(el)
                 + dy * np.cos(az) * np.cos(el)
@@ -530,34 +528,6 @@ class AntennaArray:
         if self.num_antennas == 1:
             array_response = array_response.reshape(-1, 1)
         return array_response
-
-    def _get_array_response_torch(self, az, el, device, return_tensor=False):
-        """Use PyTorch to calculate number of responses in parallel."""
-        from torch import as_tensor, cos, exp, sin
-        from torch.cuda import empty_cache
-
-        nc = self.coordinates
-        dx = as_tensor(nc[:, 0] - nc[0, 0], device=device).reshape(1, 1, -1)
-        dy = as_tensor(nc[:, 1] - nc[0, 1], device=device).reshape(1, 1, -1)
-        dz = as_tensor(nc[:, 2] - nc[0, 2], device=device).reshape(1, 1, -1)
-
-        az = as_tensor(az, device=device).reshape(-1, 1, 1)
-        el = as_tensor(el, device=device).reshape(1, -1, 1)
-
-        array_response = exp(
-            (1j * 2 * np.pi)
-            * (dx * sin(az) * cos(el) + dy * cos(az) * cos(el) + dz * sin(el))
-        ).squeeze()
-        if self.num_antennas == 1:
-            array_response = array_response.reshape(-1, 1)
-
-        if return_tensor:
-            return array_response
-
-        np_array_response = array_response.cpu().numpy()
-        del array_response
-        empty_cache()
-        return np_array_response
 
     def get_array_gain(self, az, el, db=True, use_deg=True):
         """Returns the array gain at a given azimuth and elevation in dB.
@@ -583,7 +553,7 @@ class AntennaArray:
 
         array_response = self.get_array_response(az, el)
         # multiply gain by the weights at the last dimension
-        gain = (array_response @ self.weights.conj().reshape(-1, 1)) ** 2
+        gain = (array_response @ self.weights.reshape(-1, 1)) ** 2
         gain = np.asarray(np.squeeze(gain))
         mag = np.abs(gain)
         # phase = np.angle(gain)
@@ -633,36 +603,35 @@ class AntennaArray:
 
     def plot_gain_el(self, cut=0, angles=np.linspace(-89, 89, 178), **kwargs):
         """Plot the array pattern at a given elevation."""
-        return self.plot_gain(cut, angles, "el", **kwargs)
+        return self.plot_gain(angle=cut, angle_range=angles, axis="el", **kwargs)
 
     def plot_gain_az(self, cut=0, angles=np.linspace(-89, 89, 178), **kwargs):
         """Plot the array pattern at a given azimuth."""
-        return self.plot_gain(cut, angles, "az", **kwargs)
+        return self.plot_gain(angle=cut, angle_range=angles, axis="az", **kwargs)
 
     def plot_gain(
         self,
-        polar=True,
-        cut=0,
-        angles=np.linspace(-89, 89, 356),
-        cut_along="el",
         weights=None,
+        angle=0,
+        angle_range=np.linspace(-89, 89, 356),
+        axis="el",
         db=True,
+        polar=True,
         ax=None,
-        ylim=-20,
         **kwargs,
     ):
         """Plot the array pattern at a given elevation or azimuth.
 
         Parameters
         ----------
-        cut : float
-            Elevation or azimuth angle in degrees. Angle at which the pattern is to be plotted.
-        angles : array_like
-            Azimuth or elevation angles in degrees.
-        cut_along : str, optional
-            Axis along which the cut is to be made. Takes value 'el' or 'az'. Default is 'el'.
         weights : array_like, optional
             Weights of the antennas. If not given, the weights are not changed.
+        angle : float
+            Elevation or azimuth angle in degrees. Angle at which the pattern is to be plotted.
+        range : array_like
+            Azimuth or elevation angles in degrees.
+        axis : str, optional
+            Axis along which the cut is to be made. Takes value 'el' or 'az'. Default is 'el'.
         polar : bool, optional
             If True, the pattern is plotted in polar coordinates. Default is False.
         db : bool, optional
@@ -675,12 +644,12 @@ class AntennaArray:
         if weights is not None:
             orig_weights = self.get_weights()
             self.set_weights(weights)
-        if cut_along == "el":
-            el = np.asarray(cut) * np.pi / 180
-            az = np.asarray(angles) * np.pi / 180
-        elif cut_along == "az":
-            az = np.asarray(cut) * np.pi / 180
-            el = np.asarray(angles) * np.pi / 180
+        if axis == "el":
+            el = np.asarray(angle) * np.pi / 180
+            az = np.asarray(angle_range) * np.pi / 180
+        elif axis == "az":
+            az = np.asarray(angle) * np.pi / 180
+            el = np.asarray(angle_range) * np.pi / 180
         else:
             raise ValueError("cut_along must be 'el' or 'az'")
 
@@ -693,25 +662,22 @@ class AntennaArray:
             else:
                 fig, ax = plt.subplots()
         if polar:
-            ax.plot(angles * np.pi / 180, gain, **kwargs)
-            ax.set_theta_zero_location("E")
-            # ax.set_theta_direction(-1)
-            # ax.set_rlabel_position(-90)
-            # ax.set_rticks([-20, -10, 0])
-            # ax.set_rlim(-20, 0)
-            # limit theta range to 180
-            ax.set_thetamin(min(angles))
-            ax.set_thetamax(max(angles))
+            ax.plot(angle_range * np.pi / 180, gain, **kwargs)
+            # ax.set_theta_zero_location("E")
+            ax.set_theta_zero_location("N")
+            ax.set_thetamin(min(angle_range))
+            ax.set_thetamax(max(angle_range))
             ax.set_ylabel("Gain (dB)")
             ax.set_xlabel("Azimuth (deg)")
             ax.set_theta_direction(-1)
         else:
-            ax.plot(angles, gain, **kwargs)
+            ax.plot(angle_range, gain, **kwargs)
             # ax.set_ylim(-(max(array_response)), max(array_response) + 10)
             ax.set_xlabel("Azimuth (deg)")
             ax.set_ylabel("Gain (dB)")
-        cut_name = "el" if cut_along == "el" else "az"
-        title = f"{cut_name} = {cut} deg, max gain = {np.max(np.real(gain)):.2f} dB"
+
+        axis_name = "el" if axis == "el" else "az"
+        title = f"{axis_name} = {angle} deg, max gain = {np.max(np.abs(gain)):.2f} dB"
         ax.set_title(title)
         ax.grid(True)
         if weights is not None:
@@ -830,14 +796,8 @@ class AntennaArray:
             plt.show()
         return ax
 
-    def plot(self, **kwargs):
-        """Plot the array."""
-        return self.plot_array(**kwargs)
-
-    def plot_3d(self, **kwargs):
-        """Plot the array in 3D."""
-        return self.plot_array_3d(**kwargs)
-
+    plot = plot_array
+    plot_3d = plot_array_3d
 
 def plot_arrays_3d(*arrays, **kwargs):
     """Plot multiple arrays in 3D.
