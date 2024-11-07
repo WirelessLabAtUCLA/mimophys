@@ -37,9 +37,15 @@ class LoSChannel(Channel):
 
     aod = aoa
 
-    def generate_channels(self, az, el) -> np.ndarray:
-        tx_response = self.tx.get_array_response(az, el)
-        rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
+    def generate_channels(self, az: np.ndarray, el: np.ndarray, grid=False) -> np.ndarray:
+        """Batch generate channel matrices for given AoA/AoD.
+        :param az: Azimuth angles in radians.
+        :param el: Elevation angles in radians.
+        :param grid: If True, generate channel matrix for all combinations of az and el.
+                    If False, generate channel matrix for each pair of az and el.
+        """
+        tx_response = self.tx.get_array_response(az, el, grid=False)
+        rx_response = self.rx.get_array_response(az + np.pi, el + np.pi, grid=grid)
         if len(tx_response.shape) == 1:
             tx_response = tx_response.reshape(1, -1)
         if len(rx_response.shape) == 1:

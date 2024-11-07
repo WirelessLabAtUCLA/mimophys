@@ -109,7 +109,7 @@ class RayClusterChannel(Channel):
         atx = atx.reshape(*aod_az.shape, -1)
         H = np.einsum("bn,bnr,bnt->brt", gain, arx, atx.conj())
         H /= np.sqrt(self.total_n_rays)
-        return H
+        return H.squeeze()
 
     def _torch_generate_channel_matrix(self, aoa, aod, gain):
         aoa = torch.as_tensor(aoa, dtype=torch.float64, device=self.device)

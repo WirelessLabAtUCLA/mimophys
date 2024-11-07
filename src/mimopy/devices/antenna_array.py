@@ -164,11 +164,6 @@ class AntennaArray:
 
         return ula
 
-        # for kwarg in kwargs:
-        #     ula.__setattr__(kwarg, kwargs[kwarg])
-        # return ula
-        # ula = cls(N, coordinates * spacing, **kwargs)
-
     initialize_ula = ula
 
     # TODO: fix the upa method
