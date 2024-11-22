@@ -44,6 +44,7 @@ class LoSChannel(Channel):
         :param grid: If True, generate channel matrix for all combinations of az and el.
                     If False, generate channel matrix for each pair of az and el.
         """
+        
         tx_response = self.tx.get_array_response(az, el, grid=False)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi, grid=grid)
         if len(tx_response.shape) == 1:
@@ -51,7 +52,7 @@ class LoSChannel(Channel):
         if len(rx_response.shape) == 1:
             rx_response = rx_response.reshape(1, -1)
         H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())
-        return H
+        return H.squeeze()
 
     def realize(self) -> "LoSChannel":
         """Realize the channel."""

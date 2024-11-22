@@ -24,7 +24,7 @@ class RayClusterChannel(Channel):
         ray_std: float = 0.1,
         aoa_bounds: ArrayLike = ((-np.pi, np.pi), (-np.pi, np.pi)),
         aod_bounds: ArrayLike = ((-np.pi, np.pi), (-np.pi, np.pi)),
-        device: str | None = None,
+        use_degrees: bool = False,
         *args,
         **kwargs,
     ):
@@ -35,9 +35,12 @@ class RayClusterChannel(Channel):
         self.ray_std = ray_std
         self.aoa_bounds = aoa_bounds
         self.aod_bounds = aod_bounds
-        self.device = device
         self._n_rays = -1
         self.n_rays = n_rays
+        
+        if use_degrees:
+            self.aoa_bounds = np.deg2rad(self.aoa_bounds)
+            self.aod_bounds = np.deg2rad(self.aod_bounds)
 
     n_rays = property(lambda self: self._n_rays)
     total_n_rays = property(lambda self: self.n_rays.sum())

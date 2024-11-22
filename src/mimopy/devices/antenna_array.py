@@ -656,6 +656,9 @@ class AntennaArray:
                 fig, ax = plt.subplots(subplot_kw={"projection": "polar"})
             else:
                 fig, ax = plt.subplots()
+                
+        # check if ax is polar for given axis
+        polar = ax.name == "polar" if polar else False
         if polar:
             ax.plot(angle_range * np.pi / 180, gain, **kwargs)
             # ax.set_theta_zero_location("E")

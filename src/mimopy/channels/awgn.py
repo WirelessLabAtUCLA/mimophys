@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Optional
 
 import numpy as np
 import numpy.linalg as LA
@@ -29,11 +30,12 @@ class Channel:
         rx: AntennaArray,
         path_loss: str | PathLoss = "no_loss",
         seed: int = None,
+        name: Optional[str] = None,
         # *args,
         # **kwargs,
     ):
         # use class name as default name
-        self.name = self.__class__.__name__
+        self.name = self.__class__.__name__ if name is None else name
         self.tx = tx
         self.rx = rx
         # energy of the channel matrix TO BE REALIZED
