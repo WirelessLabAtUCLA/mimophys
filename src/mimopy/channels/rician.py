@@ -56,14 +56,3 @@ class RicianChannel(Channel):
             + np.sqrt(1 / (self.K + 1)) * self.nlos.H
         )
         return self
-
-# add alias with deprecate warning
-class Rician(RicianChannel):
-    def __init__(self, *args, **kwargs):
-        import warnings
-
-        warnings.warn(
-            "Rician class has been renamed to RicianChannel. Please use RicianChannel instead.",
-            DeprecationWarning,
-        )
-        super().__init__(*args, **kwargs)

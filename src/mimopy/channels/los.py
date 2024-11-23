@@ -63,15 +63,3 @@ class LoSChannel(Channel):
         self.H = np.outer(rx_response, tx_response.conj())
         self.normalize_energy(self._energy)
         return self
-
-# add alias with deprecat warning
-class LoS(LoSChannel):
-    def __init__(self, *args, **kwargs):
-        import warnings
-
-        warnings.warn(
-            "LoS is deprecated, use LoSChannel instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)
