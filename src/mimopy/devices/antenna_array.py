@@ -159,7 +159,7 @@ class AntennaArray:
         ula = cls(N, coordinates * spacing, **kwargs)
         ula.array_center = array_center
 
-        config_map = {"x": f"({N}11)", "y": f"(1{N}1)", "z": f"(11{N})"}
+        config_map = {"x": f"({N}x1x1)", "y": f"(1x{N}x1)", "z": f"(1x1x{N})"}
         ula._config = config_map[ax]
 
         return ula
@@ -224,9 +224,9 @@ class AntennaArray:
         for kwarg in kwargs:
             upa.__setattr__(kwarg, kwargs[kwarg])
         config_map = {
-            "xy": f"({num_rows}{num_cols}1)",
-            "yz": f"(1{num_rows}{num_cols})",
-            "xz": f"({num_rows}1{num_cols})",
+            "xy": f"({num_rows}x{num_cols}x1)",
+            "yz": f"(1x{num_rows}x{num_cols})",
+            "xz": f"({num_rows}x1x{num_cols})",
         }
         upa._config = config_map[plane]
         return upa
@@ -524,7 +524,7 @@ class AntennaArray:
             array_response = array_response.reshape(-1, 1)
         return array_response
 
-    def get_array_gain(self, az, el, db=True, use_deg=True):
+    def get_array_gain(self, az, el, db=True, use_degrees=True):
         """Returns the array gain at a given azimuth and elevation in dB.
 
         Parameters
@@ -542,9 +542,9 @@ class AntennaArray:
             with shape (len(az), len(el))
         """
 
-        if use_deg:
-            az = az * np.pi / 180
-            el = el * np.pi / 180
+        if use_degrees:
+            az = np.deg2rad(az)
+            el = np.deg2rad(el)
 
         array_response = self.get_array_response(az, el)
         # multiply gain by the weights at the last dimension
@@ -649,7 +649,7 @@ class AntennaArray:
             raise ValueError("cut_along must be 'el' or 'az'")
 
         # vectorized version
-        gain = self.get_array_gain(az, el, db=db, use_deg=False)
+        gain = self.get_array_gain(az, el, db=db, use_degrees=False)
 
         if ax is None:
             if polar:
@@ -699,39 +699,79 @@ class AntennaArray:
         el=np.linspace(-90, 90, 180),
         ax=None,
         max_gain=None,
-        min_gain=None,
-        polar=False,
+        min_gain=-10,
+        polar=True,
+        use_degrees=True,
+        dB=True,
         **kwargs,
     ):
-        gain = self.get_array_gain(az, el, db=True, use_deg=True)
-        az_grid, el_grid = np.meshgrid(az, el)
+        if use_degrees:
+            az = np.deg2rad(az)
+            el = np.deg2rad(el)
+
+        gain = self.get_array_gain(az, el, db=dB, use_degrees=False)
+        AZ, EL = np.meshgrid(az, el)
 
         if max_gain is None:
             max_gain = np.max(gain)
         if min_gain is None:
             min_gain = np.min(gain)
         gain = np.clip(gain, min_gain, max_gain).T
+        gain -= min_gain
+
+        figsize = kwargs.pop("figsize", (8, 8))
+        if ax is None:
+            fig, ax = plt.subplots(
+                figsize=figsize,
+                subplot_kw={"projection": "3d"},
+            )
+
+        norm = plt.Normalize(min_gain, max_gain)
+        m = cm.ScalarMappable(cmap=cm.coolwarm, norm=norm)
+        m.set_array(gain + min_gain)
+        colors = m.to_rgba(gain + min_gain)
 
         if polar:
-            az_grid, el_grid, gain = self.cart2sph(az_grid, el_grid, gain)
+            X = gain * np.sin(AZ) * np.cos(EL)
+            Y = gain * np.cos(AZ) * np.cos(EL)
+            Z = gain * np.sin(EL)
 
-        if ax is None:
-            fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, **kwargs)
-        colors = cm.YlGnBu_r(gain)
-        ax.plot_surface(
-            az_grid,
-            el_grid,
-            gain,
-            cmap="magma",
-            facecolors=colors,
-            # linewidth=1,
-        )
-        ax.set_xlabel("Azimuth (deg)")
-        ax.set_ylabel("Elevation (deg)")
-        ax.set_zlabel("Gain (dB)")
+            fig.colorbar(m, ax=ax, shrink=0.5)
+            ax.plot_surface(
+                X,
+                Y,
+                Z,
+                facecolors=colors,
+                rstride=kwargs.pop("rstride", 2),
+                cstride=kwargs.pop("cstride", 2),
+                linewidth=kwargs.pop("linewidth", 0),
+                **kwargs,
+            )
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_zticklabels([])
+            # ax.view_init(elev=30, azim=30)
+
+        else:
+            ax.plot_surface(
+                AZ,
+                EL,
+                gain,
+                cmap="magma",
+                facecolors=colors,
+                # linewidth=1,
+                **kwargs,
+            )
+            ax.set_xlabel("Azimuth (deg)")
+            ax.set_ylabel("Elevation (deg)")
+            ax.set_zlabel("Gain (dB)")
+
         if ax is None:
             plt.tight_layout()
             plt.show()
+
+        title = f"Max Gain: {np.max(np.abs(gain)):.2f} dB"
+        ax.set_title(title)
         return fig, ax
 
     def plot_array_3d(self, **kwargs):
