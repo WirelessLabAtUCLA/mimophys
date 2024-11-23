@@ -27,18 +27,6 @@ class SphericalWaveChannel(Channel):
         d = np.sqrt(dx**2 + dy**2 + dz**2)
         # get relative phase shift
         phase_shift = 2 * np.pi * d
-        self.channel_matrix = np.exp(1j * phase_shift).T.conj()
+        self.channel_matrix = 1 / d * np.exp(1j * phase_shift).T.conj()
         self.normalize_energy(self._energy)
         return self
-    
-# add alias with deprecat warning
-class SphericalWave(SphericalWaveChannel):
-    def __init__(self, *args, **kwargs):
-        import warnings
-
-        warnings.warn(
-            "SphericalWave is deprecated, use SphericalWaveChannel instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)

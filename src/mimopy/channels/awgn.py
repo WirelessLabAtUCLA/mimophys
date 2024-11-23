@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Optional
 
 import numpy as np
 import numpy.linalg as LA
@@ -29,18 +30,18 @@ class Channel:
         rx: AntennaArray,
         path_loss: str | PathLoss = "no_loss",
         seed: int = None,
-        *args,
-        **kwargs,
+        name: Optional[str] = None,
+        # *args,
+        # **kwargs,
     ):
         # use class name as default name
-        self.name = self.__class__.__name__
+        self.name = self.__class__.__name__ if name is None else name
         self.tx = tx
         self.rx = rx
         # energy of the channel matrix TO BE REALIZED
         self._energy = self.tx.N * self.rx.N
         self.channel_matrix = -np.ones((self.rx.N, self.tx.N), dtype=complex)
         self.seed = seed
-        self.rng = np.random.default_rng(seed)
 
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
@@ -52,14 +53,21 @@ class Channel:
         else:
             raise ValueError("path_loss must be a string or PathLoss object.")
 
-        for kw, arg in kwargs.items():
-            setattr(self, kw, arg)
+        # for kw, arg in kwargs.items():
+        #     setattr(self, kw, arg)
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
         return f"{self.name} ({self.__class__.__name__})"
+
+    seed = property(lambda self: self._seed)
+
+    @seed.setter
+    def seed(self, seed):
+        self._seed = seed
+        self.rng = np.random.default_rng(self._seed)
 
     H = property(lambda self: self.channel_matrix)
 
@@ -90,12 +98,12 @@ class Channel:
     @abstractmethod
     def generate_channels(self, n_channels=1):
         """Generate multiple channel matrices."""
-        self.rng = np.random.default_rng(self.seed)
+        self.rng = np.random.default_rng(self._seed)
 
     @abstractmethod
     def realize(self):
         """Realize the channel."""
-        self.rng = np.random.default_rng(self.seed)
+        self.rng = np.random.default_rng(self._seed)
 
     @staticmethod
     def normalize_channel(H, energy):
