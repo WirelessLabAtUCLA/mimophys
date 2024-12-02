@@ -172,7 +172,7 @@ class AntennaArray:
         cls,
         N: Iterable,
         array_center=(0, 0, 0),
-        plane="xy",
+        plane="xz",
         spacing=0.5,
         **kwargs,
     ):
@@ -185,7 +185,7 @@ class AntennaArray:
             Number of rows and columns in the array.
         plane : str, optional
             Plane in which the array is to be created or the axis orthogonal to the plane.
-            Takes value 'xy', 'yz' or 'xz'. Default is 'xy'.
+            Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
         array_center : array_like, optional
             Coordinates of the center of the array. Default is [0, 0, 0].
         normalize : bool, optional
