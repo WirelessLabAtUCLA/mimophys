@@ -25,7 +25,7 @@ class RayleighChannel(Channel):
         super().__init__(tx, rx, path_loss, *args, **kwargs)
 
     def generate_channels(self, n_channels=1):
-        super().generate_channels(n_channels)
+        # super().generate_channels(n_channels)
         shape = (self.rx.N, self.tx.N)
         energy = self._energy / self.tx.N / self.rx.N
         H = self.rng.normal(0, np.sqrt(energy / 2), (n_channels, *shape, 2))

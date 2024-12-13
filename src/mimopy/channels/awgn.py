@@ -98,12 +98,12 @@ class Channel:
     @abstractmethod
     def generate_channels(self, n_channels=1):
         """Generate multiple channel matrices."""
-        self.rng = np.random.default_rng(self._seed)
+        pass
 
     @abstractmethod
     def realize(self):
         """Realize the channel."""
-        self.rng = np.random.default_rng(self._seed)
+        pass
 
     @staticmethod
     def normalize_channel(H, energy):
