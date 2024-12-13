@@ -685,16 +685,9 @@ class AntennaArray:
             plt.show()
         return ax
 
-    @staticmethod
-    def cart2sph(x, y, z):
-        hxy = np.hypot(x, y)
-        r = np.hypot(hxy, z)
-        el = np.arctan2(z, hxy)
-        az = np.arctan2(y, x)
-        return az, el, r
-
     def plot_gain_3d(
         self,
+        weights=None,
         az=np.linspace(-180, 180, 360),
         el=np.linspace(-90, 90, 180),
         ax=None,
@@ -705,6 +698,9 @@ class AntennaArray:
         dB=True,
         **kwargs,
     ):
+        if weights is not None:
+            orig_weights = self.get_weights()
+            self.set_weights(weights)
         if use_degrees:
             az = np.deg2rad(az)
             el = np.deg2rad(el)
@@ -736,6 +732,7 @@ class AntennaArray:
             Y = gain * np.cos(AZ) * np.cos(EL)
             Z = gain * np.sin(EL)
 
+            fig = ax.get_figure()
             fig.colorbar(m, ax=ax, shrink=0.5)
             ax.plot_surface(
                 X,
@@ -772,7 +769,9 @@ class AntennaArray:
 
         title = f"Max Gain: {np.max(np.abs(gain)):.2f} dB"
         ax.set_title(title)
-        return fig, ax
+        if weights is not None:
+            self.set_weights(orig_weights)
+        return ax
 
     def plot_array_3d(self, **kwargs):
         """Plot the array."""
@@ -836,78 +835,3 @@ class AntennaArray:
 
     plot = plot_array
     plot_3d = plot_array_3d
-
-def plot_arrays_3d(*arrays, **kwargs):
-    """Plot multiple arrays in 3D.
-
-    Parameters
-    ----------
-    *arrays : AntennaArray
-        List of arrays to be plotted.
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    for array in arrays:
-        ax.scatter(
-            array.coordinates[:, 0],
-            array.coordinates[:, 1],
-            array.coordinates[:, 2],
-            marker=array.marker,
-            label=array.name,
-            **kwargs,
-        )
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_arrays(*arrays, plane="xy", **kwargs):
-    """Plot multiple arrays in 2D projection.
-
-    Parameters
-    ----------
-    *arrays : AntennaArray
-        List of arrays to be plotted.
-    """
-    fig, ax = plt.subplots(**kwargs)
-    if plane == "xy":
-        for array in arrays:
-            ax.scatter(
-                array.coordinates[:, 0],
-                array.coordinates[:, 1],
-                marker=array.marker,
-                label=array.name,
-            )
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-    elif plane == "yz":
-        for array in arrays:
-            ax.scatter(
-                array.coordinates[:, 1],
-                array.coordinates[:, 2],
-                marker=array.marker,
-                label=array.name,
-            )
-        ax.set_xlabel("y")
-        ax.set_ylabel("z")
-    elif plane == "xz":
-        for array in arrays:
-            ax.scatter(
-                array.coordinates[:, 0],
-                array.coordinates[:, 2],
-                marker=array.marker,
-                label=array.name,
-            )
-        ax.set_xlabel("x")
-        ax.set_ylabel("z")
-    else:
-        raise ValueError("plane must be 'xy', 'yz' or 'xz'")
-
-    ax.grid(True)
-    ax.set_title(r"AntennaArray Projection in {}-plane".format(plane))
-    ax.legend()
-    plt.tight_layout()
-    plt.show()

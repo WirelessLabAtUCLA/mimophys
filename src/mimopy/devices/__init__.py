@@ -1,3 +1,3 @@
-from .antenna_array import AntennaArray, plot_arrays, plot_arrays_3d
+from .antenna_array import AntennaArray
 
-__all__ = ["AntennaArray", "plot_arrays", "plot_arrays_3d", "channels"]
+__all__ = ["AntennaArray"]

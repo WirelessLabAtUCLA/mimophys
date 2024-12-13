@@ -3,7 +3,7 @@
 import numpy as np
 
 from mimopy import AntennaArray, Network
-from mimopy.channels import LoSChannel, SphericalWaveChannel
+from mimopy.channels import LoSChannel, RicianChannel
 from mimopy.channels.path_loss import ConstantLoss
 
 # Number of transmit antennas at the base station
@@ -47,7 +47,7 @@ dl = LoSChannel(tx, uerx, name="dl")
 
 # Define the self-interference channel as a Rician channel with near-field LoS component
 # and far-field isotropic scattering component. Set the path loss to a constant value of -20 dB
-si = SphericalWaveChannel(
+si = RicianChannel(
     tx, rx, K=10, nearfield=True, name="si", path_loss=ConstantLoss(-20)
 )
 

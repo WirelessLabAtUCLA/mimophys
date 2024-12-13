@@ -1,4 +1,4 @@
-from .devices.antenna_array import AntennaArray, plot_arrays, plot_arrays_3d
+from .devices.antenna_array import AntennaArray
 from .network import Network
 
-__all__ = ["AntennaArray", "plot_arrays", "plot_arrays_3d", "Network"]
+__all__ = ["AntennaArray", "channels", "Network", "plotting", "utils"]

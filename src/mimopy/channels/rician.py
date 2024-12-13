@@ -13,7 +13,7 @@ class RicianChannel(Channel):
 
     Unique Attributes
     ----------
-        K (float): Rician K-factor.
+        K (float): Rician K-factor in dB.
         H_los (np.ndarray): Line-of-sight channel matrix.
         H_nlos (np.ndarray): Non-line-of-sight channel matrix.
     """
