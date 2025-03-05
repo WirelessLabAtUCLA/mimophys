@@ -1,12 +1,11 @@
 [project]
 name = "mimophys"
-version = "0.1.0"
 description = "A Python library for MIMO systems"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
-    "matplotlib>=3.10.1",
-    "numpy>=2.2.0",
+    "matplotlib>=3.9",
+    "numpy>=2.0",
 ]
 authors=[
     {name="Samuel Li", email="samuel.li@ucla.edu"},
@@ -16,6 +15,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
 ]
+dynamic = ["version"]
 
 license = "MIT"
 lisence-file = "LICENSE"
@@ -23,3 +23,6 @@ lisence-file = "LICENSE"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/mimophys/__about__.py"
