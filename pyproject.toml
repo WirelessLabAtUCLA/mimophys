@@ -1,19 +1,16 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
-name = "mimopy"
+name = "mimophys"
 version = "0.1.0"
 description = "A Python library for MIMO systems"
+readme = "README.md"
+requires-python = ">=3.12"
 dependencies = [
-    "numpy",
-    "matplotlib",
+    "matplotlib>=3.10.1",
+    "numpy>=2.2.0",
 ]
 authors=[
     {name="Samuel Li", email="samuel.li@ucla.edu"},
 ]
-readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
