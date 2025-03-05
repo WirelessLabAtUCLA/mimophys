@@ -2,9 +2,9 @@
 
 import numpy as np
 
-from mimopy import AntennaArray, Network
-from mimopy.channels import LoSChannel, RicianChannel
-from mimopy.channels.path_loss import ConstantLoss
+from mimophys import AntennaArray, Network
+from mimophys.channels import LoSChannel, RicianChannel
+from mimophys.channels.path_loss import ConstantLoss
 
 # Number of transmit antennas at the base station
 Nt = 8
