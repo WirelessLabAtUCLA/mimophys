@@ -25,7 +25,7 @@ def relative_position(loc1, loc2) -> Tuple[float, float, float]:
     loc2 = np.asarray(loc2).reshape(3)
     dxyz = dx, dy, dz = loc2 - loc1
     r = np.linalg.norm(dxyz)
-    az = np.arctan2(dy, dx)
+    az = np.arctan2(dx, dy)
     el = np.arcsin(dz / r)
     return r, az, el
 
