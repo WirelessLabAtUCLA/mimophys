@@ -11,6 +11,8 @@ from numpy.typing import ArrayLike
     x = r * sin(theta) * cos(phi)
     y = r * cos(theta) * cos(phi)
     z = r * sin(phi)
+    
+    See https://ianproberts.com/notes/arrays.html
 """
 
 
@@ -596,13 +598,13 @@ class AntennaArray:
     # Plotting
     ############################
 
-    def plot_gain_el(self, cut=0, angles=np.linspace(-89, 89, 178), **kwargs):
+    def plot_gain_el(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
         """Plot the array pattern at a given elevation."""
-        return self.plot_gain(angle=cut, angle_range=angles, axis="el", **kwargs)
+        return self.plot_gain(angle=angle, angle_range=angle_range, axis="el", **kwargs)
 
-    def plot_gain_az(self, cut=0, angles=np.linspace(-89, 89, 178), **kwargs):
+    def plot_gain_az(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
         """Plot the array pattern at a given azimuth."""
-        return self.plot_gain(angle=cut, angle_range=angles, axis="az", **kwargs)
+        return self.plot_gain(angle=angle, angle_range=angle_range, axis="az", **kwargs)
 
     def plot_gain(
         self,
@@ -656,7 +658,7 @@ class AntennaArray:
                 fig, ax = plt.subplots(subplot_kw={"projection": "polar"})
             else:
                 fig, ax = plt.subplots()
-                
+
         # check if ax is polar for given axis
         polar = ax.name == "polar" if polar else False
         if polar:
