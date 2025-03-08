@@ -21,12 +21,13 @@ class SphericalWaveChannel(Channel):
         """Realize the channel."""
         tc = self.tx.coordinates
         rc = self.rx.coordinates
-        dx = tc[:, 0].reshape(-1, 1) - rc[:, 0].reshape(1, -1)
-        dy = tc[:, 1].reshape(-1, 1) - rc[:, 1].reshape(1, -1)
-        dz = tc[:, 2].reshape(-1, 1) - rc[:, 2].reshape(1, -1)
+        dx = tc[:, 0].reshape(1, -1) - rc[:, 0].reshape(-1, 1)
+        dy = tc[:, 1].reshape(1, -1) - rc[:, 1].reshape(-1, 1)
+        dz = tc[:, 2].reshape(1, -1) - rc[:, 2].reshape(-1, 1)
         d = np.sqrt(dx**2 + dy**2 + dz**2)
         # get relative phase shift
         phase_shift = 2 * np.pi * d
-        self.channel_matrix = 1 / d * np.exp(1j * phase_shift).T.conj()
+        phase_shift = phase_shift - phase_shift[0, 0]
+        self.channel_matrix = 1 / d * np.exp(-1j * phase_shift)
         self.normalize_energy(self._energy)
         return self
