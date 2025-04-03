@@ -1,11 +1,14 @@
-import numpy as np
 from typing import Tuple
+
+import numpy as np
+
+from ..devices.antenna_array import AntennaArray
 
 __all__ = ["relative_position"]
 
 
-def relative_position(loc1, loc2) -> Tuple[float, float, float]:
-    """Returns the relative position (range, azimuth and elevation) between 2 locations.
+def relative_position(tx, rx) -> Tuple[float, float, float]:
+    """Returns the relative position (range, azimuth and elevation) from loc1 to loc2.
 
     Parameters
     ----------
@@ -21,13 +24,19 @@ def relative_position(loc1, loc2) -> Tuple[float, float, float]:
     el: float
         Elevation angle.
     """
-    loc1 = np.asarray(loc1).reshape(3)
-    loc2 = np.asarray(loc2).reshape(3)
-    dxyz = dx, dy, dz = loc2 - loc1
+    if isinstance(tx, AntennaArray):
+        tx = tx.array_center
+    if isinstance(rx, AntennaArray):
+        rx = rx.array_center
+
+    tx = np.asarray(tx).reshape(3)
+    rx = np.asarray(rx).reshape(3)
+    dxyz = dx, dy, dz = rx - tx
     r = np.linalg.norm(dxyz)
     az = np.arctan2(dx, dy)
     el = np.arcsin(dz / r)
     return r, az, el
+
 
 def sph2cart(r, az, el):
     """Convert spherical coordinates to Cartesian coordinates.

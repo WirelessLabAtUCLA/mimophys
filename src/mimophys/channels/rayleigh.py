@@ -27,7 +27,8 @@ class RayleighChannel(Channel):
     def generate_channels(self, n_channels=1):
         # super().generate_channels(n_channels)
         shape = (self.rx.N, self.tx.N)
-        energy = self._energy / self.tx.N / self.rx.N
+        # manually normalize the energy given the stochastic nature of the channel
+        energy = self.channel_energy / self.tx.N / self.rx.N
         H = self.rng.normal(0, np.sqrt(energy / 2), (n_channels, *shape, 2))
         H = H.view(np.complex128).squeeze()
         return H
@@ -35,7 +36,7 @@ class RayleighChannel(Channel):
     def realize(self):
         """Realize the channel. Energy is used to adjusting the expectation of the channel"""
         super().realize()
-        energy = self._energy / self.tx.N / self.rx.N
+        energy = self.channel_energy / self.tx.N / self.rx.N
         shape = (self.rx.N, self.tx.N)
         # self.channel_matrix = np.sqrt(energy / 2) * (
         #     np.random.randn(*shape) + 1j * np.random.randn(*shape)

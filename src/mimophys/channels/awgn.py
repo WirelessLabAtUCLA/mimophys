@@ -26,8 +26,8 @@ class Channel:
 
     def __init__(
         self,
-        tx: AntennaArray,
-        rx: AntennaArray,
+        tx: AntennaArray = None,
+        rx: AntennaArray = None,
         path_loss: str | PathLoss = "no_loss",
         seed: int = None,
         name: Optional[str] = None,
@@ -36,13 +36,11 @@ class Channel:
     ):
         # use class name as default name
         self.name = self.__class__.__name__ if name is None else name
-        self.tx = tx
-        self.rx = rx
-        # energy of the channel matrix TO BE REALIZED
-        self._energy = self.tx.N * self.rx.N
-        self.channel_matrix = -np.ones((self.rx.N, self.tx.N), dtype=complex)
+        self.tx = None
+        self.rx = None
+        self.set_tx(tx)
+        self.set_rx(rx)
         self.seed = seed
-
         self._carrier_frequency = 1e9
         self._propagation_velocity = 299792458
         self._carrier_wavelength = self.propagation_velocity / self.carrier_frequency
@@ -64,6 +62,20 @@ class Channel:
 
     seed = property(lambda self: self._seed)
 
+    def set_tx(self, tx: AntennaArray):
+        """Set the transmitter antenna array. Reset energy and channel matrix."""
+        self.tx = tx
+        if self.tx is not None and self.rx is not None:
+            self.channel_energy = self.tx.N * self.rx.N
+        self.channel_matrix = None
+
+    def set_rx(self, rx: AntennaArray):
+        """Set the receiver antenna array."""
+        self.rx = rx
+        if self.rx is not None and self.tx is not None:
+            self.channel_energy = self.tx.N * self.rx.N
+        self.channel_matrix = None
+
     @seed.setter
     def seed(self, seed):
         self._seed = seed
@@ -73,20 +85,14 @@ class Channel:
 
     @H.setter
     def H(self, H):
+        """Set the channel matrix."""
         self.channel_matrix = H
 
-    @property
-    def energy(self):
+    def get_chennel_energy(self):
         """Energy of the channel matrix."""
         return LA.norm(self.H, "fro") ** 2
 
-    @energy.setter
-    def energy(self, energy):
-        self._energy = energy
-
-    @property
-    def nodes(self):
-        return [self.tx, self.rx]
+    nodes_are_set = property(lambda self: self.tx is not None and self.rx is not None)
 
     def has_node(self, node):
         return node == self.tx or node == self.rx
@@ -105,17 +111,20 @@ class Channel:
         """Realize the channel."""
         pass
 
-    @staticmethod
-    def normalize_channel(H, energy):
-        """Normalize the channel energy."""
-        H = np.sqrt(energy) * H / LA.norm(H, "fro")
-        return H
-
-    def normalize_energy(self, energy):
+    def normalize_energy(self, energy=None):
         """Normalize the channel energy."""
         if energy is not None:
-            self.H = self.normalize_channel(self.H, energy)
-        return self.H
+            self.channel_energy = energy
+            assert (
+                self.channel_matrix is not None
+            ), "Channel matrix is not generated yet."
+
+            self.channel_matrix = (
+                np.sqrt(self.channel_energy)
+                * self.channel_matrix
+                / LA.norm(self.channel_matrix, "fro")
+            )
+        return self.channel_matrix
 
     # ========================================================
     # Measurements
