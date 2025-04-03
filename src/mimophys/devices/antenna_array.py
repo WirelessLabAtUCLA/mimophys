@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as LA
 from matplotlib import cm
+from matplotlib.axes import Axes
 from numpy import log10
 from numpy.typing import ArrayLike
 
@@ -19,15 +20,17 @@ from numpy.typing import ArrayLike
 class AntennaArray:
     """Base class for array objects.
 
-    Parameters
-    ----------
-    num_antennas : int
-        Number of antennas in the array.
-    coordinates : array_like
-        Coordinates of the antennas. The shape of the array must be (num_antennas, 3).
-    weights : array_like, optional
-        Weights of the antennas. If not given, all antennas are assumed to have
-        unit weight.
+    Args:
+        N: Number of antennas in the array.
+        coordinates: Coordinates of the antennas. The shape of the array must be (num_antennas, 3).
+        power: Power level of the antenna array.
+        noise_power: Noise power level.
+        power_dbm: Power level in dBm (if specified, overrides power).
+        noise_power_dbm: Noise power level in dBm (if specified, overrides noise_power).
+        name: Name identifier for the antenna array.
+        weights: Weights of the antennas. If not given, all antennas are assumed to have unit weight.
+        frequency: Operating frequency in Hz.
+        marker: Marker style for plotting.
     """
 
     def __init__(
@@ -133,22 +136,21 @@ class AntennaArray:
         spacing=0.5,
         **kwargs,
     ):
-        """Empties the array and creates a half-wavelength spaced,
-        uniforom linear array along the desired axis centered at the origin.
+        """Creates a half-wavelength spaced, uniform linear array along the desired axis.
 
-        Parameters
-        ----------
-        N : int
-            Number of antennas in the array.
-        ax : char, optional
-            Axis along which the array is to be created.
-            Takes value 'x', 'y' or 'z'. Default is 'x'.
-        array_center : array_like, optional
-            Coordinates of the center of the array. Default is [0, 0, 0].
-        spacing : float, optional
-            Spacing between the antennas. Default is 0.5.
-        normalize : bool, optional
-            If True, the weights are normalized to have unit norm. Default is True.
+        Args:
+            N: Number of antennas in the array.
+            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
+            ax: Axis along which the array is to be created.
+                Takes value 'x', 'y' or 'z'. Default is 'x'.
+            spacing: Spacing between the antennas. Default is 0.5.
+            **kwargs: Additional arguments passed to the constructor.
+
+        Returns:
+            AntennaArray: A uniform linear array instance.
+
+        Raises:
+            ValueError: If ax is not 'x', 'y' or 'z'.
         """
         if ax == "x":
             coordinates = np.array([np.arange(N), np.zeros(N), np.zeros(N)]).T
@@ -168,7 +170,6 @@ class AntennaArray:
 
     initialize_ula = ula
 
-    # TODO: fix the upa method
     @classmethod
     def upa(
         cls,
@@ -178,20 +179,21 @@ class AntennaArray:
         spacing=0.5,
         **kwargs,
     ):
-        """Empties the array and creates a half-wavelength spaced,
-        uniform plannar array in the desired plane.
+        """Creates a half-wavelength spaced, uniform planar array in the desired plane.
 
-        Parameters
-        ----------
-        N : Iterable
-            Number of rows and columns in the array.
-        plane : str, optional
-            Plane in which the array is to be created or the axis orthogonal to the plane.
-            Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
-        array_center : array_like, optional
-            Coordinates of the center of the array. Default is [0, 0, 0].
-        normalize : bool, optional
-            If True, the weights are normalized to have unit norm. Default is True.
+        Args:
+            N: Number of rows and columns in the array.
+            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
+            plane: Plane in which the array is to be created or the axis orthogonal to the plane.
+                Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
+            spacing: Spacing between the antennas. Default is 0.5.
+            **kwargs: Additional arguments passed to the constructor.
+
+        Returns:
+            AntennaArray: A uniform planar array instance.
+
+        Raises:
+            ValueError: If plane is not 'xy', 'yz', or 'xz'.
         """
         num_rows = N[0]
         num_cols = N[1]
@@ -237,54 +239,53 @@ class AntennaArray:
 
     @classmethod
     def from_file(cls, filename):
-        """Load an array from a file.
+        """Load an antenna array from a file.
 
-        Parameters
-        ----------
-        filename : str
-            Name of the file to load the array from.
+        Args:
+            filename: Name of the file to load the array from.
+
+        Raises:
+            NotImplementedError: This method is not implemented yet.
         """
         raise NotImplementedError
 
     def to_file(self, filename):
         """Save the array to a file.
 
-        Parameters
-        ----------
-        filename : str
-            Name of the file to save the array to.
+        Args:
+            filename: Name of the file to save the array to.
         """
         np.save(filename, [self.coordinates, self.weights, self.marker])
 
     def reset(self):
-        """reset weights to 1"""
+        """Reset weights to 1."""
         self.weights = np.ones(self.num_antennas)
 
     def normalize_weights(self, norm=1):
-        """Normalize the weights of the antennas to have unit norm."""
+        """Normalize the weights of the antennas to have unit norm.
+
+        Args:
+            norm: Target norm for the weights. Default is 1.
+        """
         if LA.norm(self.weights) != 0:
             self.weights = self.weights * norm / LA.norm(self.weights)
 
-    def set_weights(self, weights: Iterable | complex):
+    def set_weights(self, weights: ArrayLike):
         """Set the weights of the antennas.
 
-        Parameters
-        ----------
-        weights : array_like or float
-            Weights of the antennas.
-            If an array is given, the shape of the array must match the length of coordinates given.
-            If a float is given, all antennas are changed to the same weight. and coordinates are ignored.
-        index : array_like, optional
-            Indices of the antennas whose weight is to be changed. If not given, the
-            weights of all antennas are passed.
-        normalize : bool, optional
-            If True, the weights are normalized to have unit norm. Default is True.
-        """
+        Args:
+            weights: Weights of the antennas. If a scalar is given, all
+                antennas are set to the same weight. If an array is given, the
+                weights are set to the given array. The shape of the array must
+                match the number of antennas in the array.
 
+        Raises:
+            ValueError: If the length of weights does not match the number of antennas.
+        """
         if np.isscalar(weights):
             self.weights = weights * np.ones(self.num_antennas)
         else:
-            weights = np.asarray(weights).reshape(-1)
+            weights = np.asarray(weights, dtype=np.complex128).reshape(-1)
             if len(weights) != self.num_antennas:
                 raise ValueError(
                     "The length of weights must match the number of antennas"
@@ -294,11 +295,15 @@ class AntennaArray:
     def get_weights(self, coordinates=None):
         """Get the weights of the antennas.
 
-        Parameters
-        ----------
-        coordinates : array_like
-            Coordinates of the antennas whose weight is to be changed. If not
-            given, the coordinates of all antennas are passed.
+        Args:
+            coordinates: Coordinates of the antennas whose weight is to be retrieved. If not
+                given, the weights of all antennas are returned.
+
+        Returns:
+            numpy.ndarray: Array of weights.
+
+        Raises:
+            ValueError: If no matching coordinates are found.
         """
         if coordinates is None:
             return self.weights
@@ -312,12 +317,12 @@ class AntennaArray:
     def _match_coordinates(self, coordinates):
         """Match the given coordinates to the coordinates of the array.
 
-        Parameters
-        ----------
-        coordinates : array_like
-            Coordinates of the antennas to be matched. The shape of the array must be (num_antennas, 3).
-        """
+        Args:
+            coordinates: Coordinates of the antennas to be matched. The shape of the array must be (num_antennas, 3).
 
+        Returns:
+            numpy.ndarray: Indices of matching coordinates.
+        """
         # match each coordinate to with the coordinate in the array and return the indices
         indices = []
         coordinates = np.reshape(coordinates, (-1, 3))
@@ -331,10 +336,8 @@ class AntennaArray:
     def add_elements(self, coordinates):
         """Add antennas to the array.
 
-        Parameters
-        ----------
-        coordinates : array_like
-            Coordinates of the antennas to be added. The shape of the array must be (num_antennas, 3).
+        Args:
+            coordinates: Coordinates of the antennas to be added. The shape of the array must be (num_antennas, 3).
         """
         self.coordinates = np.concatenate((self.coordinates, coordinates))
         self.num_antennas += coordinates.shape[0]
@@ -343,12 +346,13 @@ class AntennaArray:
     def remove_elements(self, coordinates=None, indices=None):
         """Remove antennas from the array by coordinates or indices.
 
-        Parameters
-        ----------
-        coordinates : array_like, optional
-            Coordinates of the antennas to be removed. The shape of the array must be (num_antennas, 3).
-        indices : array_like, optional
-            Indices of the antennas to be removed."""
+        Args:
+            coordinates: Coordinates of the antennas to be removed. The shape of the array must be (num_antennas, 3).
+            indices: Indices of the antennas to be removed.
+
+        Raises:
+            ValueError: If neither coordinates nor indices are provided.
+        """
 
         def _remove_elements_by_coord(self, coordinates):
             indices = self._match_coordinates(coordinates)
@@ -368,47 +372,17 @@ class AntennaArray:
         else:
             raise ValueError("Either coordinates or indices must be given")
 
-    # @staticmethod
-    # def _translate_coordinates(coordinates, shift=None):
-    #     """Shift all elements of the array by the given coordinates.
-
-    #     Parameters
-    #     ----------
-    #     coordinates: array_like
-    #         Coordinates of the array to be shifted.
-    #     shift: array_like, optional
-    #         Coordinates by which the array is to be shifted. If not given, the
-    #         array is centered at the origin.
-    #     """
-    #     if shift is None:
-    #         shift = -np.mean(coordinates, axis=0)
-    #     shift = np.asarray(shift).reshape(1, -1)
-    #     coordinates += shift
-    #     return coordinates
-
-    # def translate(self, coordinates=None):
-    #     """Shift all elements of the array by the given coordinates.
-    #     Parameters
-    #     ----------
-    #     coordinates: array_like, optional
-    #         Coordinates by which the array is to be shifted. If not given, the
-    #         array is centered at the origin.
-    #     """
-    #     if coordinates is None:
-    #         coordinates = -np.mean(self.coordinates, axis=0)
-    #     self.coordinates += coordinates
-    #     return coordinates
-
     def _rotate(self, coordinates, x_angle, y_angle, z_angle):
         """Rotate the array by the given angles.
-        Parameters
-        ----------
-        x_angle : float
-            Angle of rotation about the x-axis in radians.
-        y_angle : float
-            Angle of rotation about the y-axis in radians.
-        z_angle : float
-            Angle of rotation about the z-axis in radians.
+        
+        Args:
+            coordinates: Coordinates to rotate.
+            x_angle: Angle of rotation about the x-axis in radians.
+            y_angle: Angle of rotation about the y-axis in radians.
+            z_angle: Angle of rotation about the z-axis in radians.
+            
+        Returns:
+            numpy.ndarray: Rotated coordinates.
         """
         rotation_matrix = np.array(
             [
@@ -445,19 +419,16 @@ class AntennaArray:
     def rotate(self, x_angle=0.0, y_angle=0.0, z_angle=0.0, inplace=True):
         """Rotate the array by the given angles.
 
-        Parameters
-        ----------
-        x_angle : float
-            Angle of rotation about the x-axis in radians.
-        y_angle : float
-            Angle of rotation about the y-axis in radians.
-        z_angle : float
-            Angle of rotation about the z-axis in radians.
-        inplace : bool, optional
-            If True, the array is rotated in-place. If False, a new array is
-            returned. Default is True.
-        """
+        Args:
+            x_angle: Angle of rotation about the x-axis in radians.
+            y_angle: Angle of rotation about the y-axis in radians.
+            z_angle: Angle of rotation about the z-axis in radians.
+            inplace: If True, the array is rotated in-place. If False, a new array is
+                returned. Default is True.
 
+        Returns:
+            AntennaArray: Either self (if inplace=True) or a new rotated array.
+        """
         if inplace:
             self._rotate(self.coordinates, x_angle, y_angle, z_angle)
             return self
@@ -474,31 +445,20 @@ class AntennaArray:
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
-        on an incoming wavefront from the given direction, normalied to the first
-        element in the array
+        on an incoming wavefront from the given direction, normalized to the first
+        element in the array.
 
-        Parameters
-        ----------
-        az : float, array_like
-            Azimuth angle in radians.
-        el : float, array_like
-            Elevation angle in radians.
-        grid : bool, optional
-            If True, then the array response is calculated for all combinations of
-            azimuth and elevation angles.
-            Otherwise, the array response is calculated for the given azimuth and elevation
-            pair. (their dimensions must match)
-        torch_device : str, optional
-            If given, PyTorch is used to calculate the array response. Default is None.
-        return_tensor : bool, optional
-            If True, the array response is returned as a PyTorch tensor.
-            Only valid if torch_device is given.
-            Default is False.
+        Args:
+            az: Azimuth angle in radians.
+            el: Elevation angle in radians.
+            grid: If True, then the array response is calculated for all combinations of
+                azimuth and elevation angles.
+                Otherwise, the array response is calculated for the given azimuth and elevation
+                pair. (their dimensions must match)
 
-        Returns
-        -------
-        array_response: The array response vector up to 3 dimensions. The shape of the array is
-        (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
+        Returns:
+            numpy.ndarray: The array response vector up to 3 dimensions. The shape of the array is
+            (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
         # calculate the distance of each element from the first element
         dx = self.coordinates[:, 0] - self.coordinates[0, 0]
@@ -527,23 +487,18 @@ class AntennaArray:
         return array_response
 
     def get_array_gain(self, az, el, db=True, use_degrees=True):
-        """Returns the array gain at a given azimuth and elevation in dB.
+        """Returns the array gain at a given azimuth and elevation.
 
-        Parameters
-        ----------
-        az : float
-            Azimuth angle in radians.
-        el : float
-            Elevation angle in radians.
-        db : bool, optional
-            If True, the gain is returned in dB. Default is True.
+        Args:
+            az: Azimuth angle.
+            el: Elevation angle.
+            db: If True, the gain is returned in dB. Default is True.
+            use_degrees: If True, az and el are in degrees, otherwise in radians. Default is True.
 
-        Returns
-        -------
-        array_gain: The array gain at the given azimuth and elevation
-            with shape (len(az), len(el))
+        Returns:
+            numpy.ndarray: The array gain at the given azimuth and elevation
+                with shape (len(az), len(el)).
         """
-
         if use_degrees:
             az = np.deg2rad(az)
             el = np.deg2rad(el)
@@ -564,12 +519,12 @@ class AntennaArray:
     def conjugate_beamformer(self, az=0, el=0):
         """Returns the conjugate beamformer at a given azimuth and elevation.
 
-        Parameters
-        ----------
-        az : float
-            Azimuth angle in degrees.
-        el : float
-            Elevation angle in degrees.
+        Args:
+            az: Azimuth angle in degrees.
+            el: Elevation angle in degrees.
+
+        Returns:
+            numpy.ndarray: Conjugate beamformer weights.
         """
         array_response_vector = self.get_array_response(
             az * np.pi / 180, el * np.pi / 180
@@ -579,15 +534,14 @@ class AntennaArray:
     def get_array_pattern_azimuth(self, el, num_points=360, range=360):
         """Returns the array pattern at a given elevation.
 
-        Parameters
-        ----------
-        el : float
-            Elevation angle in radians.
-        num_points : int, optional
-            Number of points at which the pattern is to be calculated.
-            Default is 360.
-        range : float, optional
-            Range of azimuth angles in degrees. Default is 360.
+        Args:
+            el: Elevation angle in radians.
+            num_points: Number of points at which the pattern is to be calculated.
+                Default is 360.
+            range: Range of azimuth angles in degrees. Default is 360.
+
+        Returns:
+            numpy.ndarray: Array pattern values at specified azimuth points.
         """
         az = np.linspace(-range / 2, range / 2, num_points) * np.pi / 180
         return self.get_array_response(az, el)
@@ -599,56 +553,75 @@ class AntennaArray:
     ############################
 
     def plot_gain_el(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
-        """Plot the array pattern at a given elevation."""
-        return self.plot_gain(angle=angle, angle_range=angle_range, axis="el", **kwargs)
+        """Plot the array pattern along elevation at a given azimuth.
+
+        Args:
+            angle: Azimuth angle in degrees.
+            angle_range: Range of elevation angles to plot.
+            **kwargs: Additional arguments passed to plot_gain.
+
+        Returns:
+            matplotlib.axes.Axes: The axes object with the plot.
+        """
+        return self.plot_gain(
+            angle=angle, angle_range=angle_range, along="el", **kwargs
+        )
 
     def plot_gain_az(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
-        """Plot the array pattern at a given azimuth."""
-        return self.plot_gain(angle=angle, angle_range=angle_range, axis="az", **kwargs)
+        """Plot the array pattern along azimuth at a given elevation.
+
+        Args:
+            angle: Elevation angle in degrees.
+            angle_range: Range of azimuth angles to plot.
+            **kwargs: Additional arguments passed to plot_gain.
+
+        Returns:
+            matplotlib.axes.Axes: The axes object with the plot.
+        """
+        return self.plot_gain(
+            angle=angle, angle_range=angle_range, along="az", **kwargs
+        )
 
     def plot_gain(
         self,
-        weights=None,
-        angle=0,
-        angle_range=np.linspace(-89, 89, 356),
-        axis="el",
-        db=True,
-        polar=True,
-        ax=None,
+        weights: ArrayLike = None,
+        along: str = "el",
+        angle: float = 0,
+        angle_range: ArrayLike = np.linspace(-89, 89, 356),
+        use_degrees: bool = True,
+        db: bool = True,
+        polar: bool = True,
+        ax: Axes = None,
         **kwargs,
     ):
         """Plot the array pattern at a given elevation or azimuth.
 
-        Parameters
-        ----------
-        weights : array_like, optional
-            Weights of the antennas. If not given, the weights are not changed.
-        angle : float
-            Elevation or azimuth angle in degrees. Angle at which the pattern is to be plotted.
-        range : array_like
-            Azimuth or elevation angles in degrees.
-        axis : str, optional
-            Axis along which the cut is to be made. Takes value 'el' or 'az'. Default is 'el'.
-        polar : bool, optional
-            If True, the pattern is plotted in polar coordinates. Default is False.
-        db : bool, optional
-            If True, the gain is plotted in dB. Default is True.
-        ax : matplotlib.axes.Axes, optional
-            The matplotlib axes object. If not given, a new figure is created.
-        **kwargs : optional
-            matplotlib.pyplot.plot arguments.
+        Args:
+            weights (ArrayLike, optional): Weights of the antennas. If not given,
+                the weights of the array are used.
+            along (str): Axis along which the gain is to be plotted.
+                Takes value 'el'/'elevation' or 'az'/'azimuth'. Default is 'el'.
+            angle (float): Angle at which the gain is to be plotted along the given axis.
+            angle_range (ArrayLike): Range of angles at which the gain is to be plotted.
+            use_degrees (bool): If True, the angles are in degrees. Default is True.
+            db (bool): If True, the gain is plotted in dB. Default is True.
+            polar (bool): If True, a polar plot is created. Default is True.
+            ax (matplotlib.axes.Axes, optional): Axes on which to plot the gain.
+
+        Returns:
+            matplotlib.axes.Axes: The axes object with the plot.
         """
         if weights is not None:
             orig_weights = self.get_weights()
             self.set_weights(weights)
-        if axis == "el":
+        if along == "el" or along == "elevation":
             el = np.asarray(angle) * np.pi / 180
             az = np.asarray(angle_range) * np.pi / 180
-        elif axis == "az":
+        elif along == "az" or along == "azimuth":
             az = np.asarray(angle) * np.pi / 180
             el = np.asarray(angle_range) * np.pi / 180
         else:
-            raise ValueError("cut_along must be 'el' or 'az'")
+            raise ValueError("`along` must be 'el'/'elevation or 'az'/'azimuth'.")
 
         # vectorized version
         gain = self.get_array_gain(az, el, db=db, use_degrees=False)
@@ -668,15 +641,15 @@ class AntennaArray:
             ax.set_thetamin(min(angle_range))
             ax.set_thetamax(max(angle_range))
             ax.set_ylabel("Gain (dB)")
-            ax.set_xlabel("Azimuth (deg)")
+            ax.set_xlabel("Azimuth (deg)" if along == "el" else "Elevation (deg)")
             ax.set_theta_direction(-1)
         else:
             ax.plot(angle_range, gain, **kwargs)
             # ax.set_ylim(-(max(array_response)), max(array_response) + 10)
-            ax.set_xlabel("Azimuth (deg)")
+            ax.set_xlabel("Azimuth (deg)" if along == "el" else "Elevation (deg)")
             ax.set_ylabel("Gain (dB)")
 
-        axis_name = "el" if axis == "el" else "az"
+        axis_name = "el" if along == "el" else "az"
         title = f"{axis_name} = {angle} deg, max gain = {np.max(np.abs(gain)):.2f} dB"
         ax.set_title(title)
         ax.grid(True)
@@ -700,6 +673,23 @@ class AntennaArray:
         dB=True,
         **kwargs,
     ):
+        """Plot 3D gain pattern of the antenna array.
+
+        Args:
+            weights: Weights to use for the plot. If None, the current weights are used.
+            az: Azimuth angles to evaluate gain at.
+            el: Elevation angles to evaluate gain at.
+            ax: Matplotlib axes to plot on. If None, creates a new figure.
+            max_gain: Maximum gain value for color scaling. If None, uses the maximum actual gain.
+            min_gain: Minimum gain value for color scaling.
+            polar: If True, plots in polar coordinates, otherwise in Cartesian.
+            use_degrees: If True, az and el are in degrees, otherwise in radians.
+            dB: If True, plots gain in dB scale.
+            **kwargs: Additional arguments passed to plot_surface.
+
+        Returns:
+            matplotlib.axes.Axes: The axes object with the plot.
+        """
         if weights is not None:
             orig_weights = self.get_weights()
             self.set_weights(weights)
@@ -776,7 +766,14 @@ class AntennaArray:
         return ax
 
     def plot_array_3d(self, **kwargs):
-        """Plot the array."""
+        """Plot the antenna array in 3D.
+
+        Args:
+            **kwargs: Additional arguments passed to scatter.
+
+        Returns:
+            matplotlib.axes.Axes: The axes object with the plot.
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
         ax.scatter(
@@ -792,18 +789,18 @@ class AntennaArray:
         plt.show()
 
     def plot_array(self, plane="xy", ax=None):
-        """Plot the array in 2D projection
+        """Plot the array in 2D projection.
 
-        Parameters
-        ----------
-        plane : str, optional
-            Plane in which the array is to be projected.
-            Takes value 'xy', 'yz' or 'xz'. Default is 'xy'.
+        Args:
+            plane: Plane in which the array is to be projected.
+                Takes value 'xy', 'yz' or 'xz'. Default is 'xy'.
+            ax: Matplotlib axes to plot on. If None, creates a new figure.
 
-        Returns
-        -------
-        ax : matplotlib.axes.Axes
-            The matplotlib axes object.
+        Returns:
+            matplotlib.axes.Axes: The axes object with the plot.
+
+        Raises:
+            ValueError: If plane is not 'xy', 'yz', or 'xz'.
         """
         if ax is None:
             fig, ax = plt.subplots()
