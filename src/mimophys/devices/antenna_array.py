@@ -564,7 +564,7 @@ class AntennaArray:
             matplotlib.axes.Axes: The axes object with the plot.
         """
         return self.plot_gain(
-            angle=angle, angle_range=angle_range, along="el", **kwargs
+            angle=angle, angle_range=angle_range, axis="el", **kwargs
         )
 
     def plot_gain_az(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
@@ -579,13 +579,13 @@ class AntennaArray:
             matplotlib.axes.Axes: The axes object with the plot.
         """
         return self.plot_gain(
-            angle=angle, angle_range=angle_range, along="az", **kwargs
+            angle=angle, angle_range=angle_range, axis="az", **kwargs
         )
 
     def plot_gain(
         self,
         weights: ArrayLike = None,
-        along: str = "el",
+        axis: str = "el",
         angle: float = 0,
         angle_range: ArrayLike = np.linspace(-89, 89, 356),
         use_degrees: bool = True,
@@ -614,10 +614,10 @@ class AntennaArray:
         if weights is not None:
             orig_weights = self.get_weights()
             self.set_weights(weights)
-        if along == "el" or along == "elevation":
+        if axis == "el" or axis == "elevation":
             el = np.asarray(angle) * np.pi / 180
             az = np.asarray(angle_range) * np.pi / 180
-        elif along == "az" or along == "azimuth":
+        elif axis == "az" or axis == "azimuth":
             az = np.asarray(angle) * np.pi / 180
             el = np.asarray(angle_range) * np.pi / 180
         else:
@@ -641,15 +641,15 @@ class AntennaArray:
             ax.set_thetamin(min(angle_range))
             ax.set_thetamax(max(angle_range))
             ax.set_ylabel("Gain (dB)")
-            ax.set_xlabel("Azimuth (deg)" if along == "el" else "Elevation (deg)")
+            ax.set_xlabel("Azimuth (deg)" if axis == "el" else "Elevation (deg)")
             ax.set_theta_direction(-1)
         else:
             ax.plot(angle_range, gain, **kwargs)
             # ax.set_ylim(-(max(array_response)), max(array_response) + 10)
-            ax.set_xlabel("Azimuth (deg)" if along == "el" else "Elevation (deg)")
+            ax.set_xlabel("Azimuth (deg)" if axis == "el" else "Elevation (deg)")
             ax.set_ylabel("Gain (dB)")
 
-        axis_name = "el" if along == "el" else "az"
+        axis_name = "el" if axis == "el" else "az"
         title = f"{axis_name} = {angle} deg, max gain = {np.max(np.abs(gain)):.2f} dB"
         ax.set_title(title)
         ax.grid(True)

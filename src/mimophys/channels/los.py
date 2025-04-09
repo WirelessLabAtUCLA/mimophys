@@ -51,7 +51,7 @@ class LoSChannel(Channel):
             tx_response = tx_response.reshape(1, -1)
         if len(rx_response.shape) == 1:
             rx_response = rx_response.reshape(1, -1)
-        H = np.einsum("ij, ik->ijk", rx_response, tx_response.conj())
+        H = np.einsum("ij, ik->ijk", rx_response.conj(), tx_response)
         return H.squeeze()
 
     def realize(self) -> "LoSChannel":
@@ -61,5 +61,5 @@ class LoSChannel(Channel):
         tx_response = self.tx.get_array_response(az, el)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
         self.H = np.outer(rx_response, tx_response.conj())
-        self.normalize_energy(self._energy)
+        self.normalize_energy(self.channel_energy)
         return self

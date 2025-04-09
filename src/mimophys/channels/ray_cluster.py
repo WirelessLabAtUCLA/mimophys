@@ -1,3 +1,4 @@
+from collections import namedtuple
 from typing import Optional, Sequence, Union
 
 import numpy as np
@@ -44,7 +45,7 @@ class RayClusterChannel(Channel):
             aod_bounds (ArrayLike, optional): Bounds of the AoD angles. Default is None.
                 The first dimension is for azimuth and the second dimension is for elevation.
                 If None, the same bounds as aoa_bounds will be used.
-            use_degrees (bool): Whether to use degrees for the angles. Default is False.
+            use_degrees (bool): Whether to use degrees for the angles and `ray_std`. Default is False.
                 If True, the angles will be converted to radians.
         """
 
@@ -62,10 +63,12 @@ class RayClusterChannel(Channel):
 
         self.cluster_angle_distrubution = cluster_angle_distrubution
         self.ray_angle_distribution = ray_angle_distribution
+
         self.ray_std = ray_std
         self.aoa_bounds = aoa_bounds
         self.aod_bounds = aod_bounds if aod_bounds is not None else aoa_bounds
         if use_degrees:
+            self.ray_std = np.deg2rad(self.ray_std)
             self.aoa_bounds = np.deg2rad(self.aoa_bounds)
             self.aod_bounds = np.deg2rad(self.aod_bounds)
 
@@ -232,7 +235,16 @@ class RayClusterChannel(Channel):
             return_params (bool): Whether to return the parameters used to generate the channel.
 
         Returns:
-            np.ndarray: Channel matrices with shape (num_channels, rx.N, tx.N)
+            np.ndarray: Channel matrices with shape (num_channels, tx.N, rx.N)
+            RayClusterParams: The parameters used to generate the channel.
+                The parameters are a named tuple with the following fields:
+                - n_rays (np.ndarray): The number of rays for each channel.
+                - aoas (list[np.ndarray]): A list of AoA of the rays for each channel,
+                    with shape (num_rays, 2) for each element.
+                - aods (list[np.ndarray]): A list of AoD of the rays for each channel,
+                    with shape (num_rays, 2) for each element.
+                - ray_gains (list[np.ndarray]): A list of gain of the rays for each channel,
+                    with shape (num_rays,) for each element.
         """
         n_channels = int(n_channels)
         # generate unique n_rays
@@ -243,15 +255,28 @@ class RayClusterChannel(Channel):
 
         # split rays_per_cluster by the number of rays
         _, n_ray_counts = np.unique(n_rays, return_counts=True)
+
+        if return_params:
+            aoas, aods, ray_gains = [], [], []
+
         cts = np.append(0, np.cumsum(n_ray_counts))
         for i in range(len(cts) - 1):
             rpc = rays_per_cluster[cts[i] : cts[i + 1]]
             aoa, aod, cluster_aoa, cluster_aod = self.generate_ray_angles(rpc)
             ray_gain = self.generate_ray_gain(aoa)
             H[cts[i] : cts[i + 1]] = self.compute_channel_matrix(aoa, aod, ray_gain)
+            if return_params:
+                aoas.append(aoa)
+                aods.append(aod)
+                ray_gains.append(ray_gain)
 
-        # if return_params:
-        #     return H, cluster_aoa, cluster_aod, aoa, aod, ray_gain
+        if return_params:
+            # return a named tuple
+            RayClusterParams = namedtuple(
+                "RayClusterParams", ["n_rays", "aoas", "aods", "ray_gains"]
+            )
+            return H, RayClusterParams(n_rays, aoas, aods, ray_gains)
+
         return H
 
 
