@@ -8,6 +8,8 @@ from matplotlib.axes import Axes
 from numpy import log10
 from numpy.typing import ArrayLike
 
+from ..utils.geometry import rotation_matrix
+
 """Azimuth 0 is along the y-axis, elevation 0 is in the x-y plane. (update 2024.10.30)
     x = r * sin(theta) * cos(phi)
     y = r * cos(theta) * cos(phi)
@@ -372,70 +374,74 @@ class AntennaArray:
         else:
             raise ValueError("Either coordinates or indices must be given")
 
-    def _rotate(self, coordinates, x_angle, y_angle, z_angle):
-        """Rotate the array by the given angles.
-        
-        Args:
-            coordinates: Coordinates to rotate.
-            x_angle: Angle of rotation about the x-axis in radians.
-            y_angle: Angle of rotation about the y-axis in radians.
-            z_angle: Angle of rotation about the z-axis in radians.
-            
-        Returns:
-            numpy.ndarray: Rotated coordinates.
-        """
-        rotation_matrix = np.array(
-            [
-                [
-                    np.cos(y_angle) * np.cos(z_angle),
-                    np.cos(z_angle) * np.sin(x_angle) * np.sin(y_angle)
-                    - np.cos(x_angle) * np.sin(z_angle),
-                    np.cos(x_angle) * np.cos(z_angle) * np.sin(y_angle)
-                    + np.sin(x_angle) * np.sin(z_angle),
-                ],
-                [
-                    np.cos(y_angle) * np.sin(z_angle),
-                    np.cos(x_angle) * np.cos(z_angle)
-                    + np.sin(x_angle) * np.sin(y_angle) * np.sin(z_angle),
-                    -np.cos(z_angle) * np.sin(x_angle)
-                    + np.cos(x_angle) * np.sin(y_angle) * np.sin(z_angle),
-                ],
-                [
-                    -np.sin(y_angle),
-                    np.cos(y_angle) * np.sin(x_angle),
-                    np.cos(x_angle) * np.cos(y_angle),
-                ],
-            ]
-        )
-
-        translate_coordinates = self.translate()  # center the array at the origin
-        self.coordinates = np.dot(coordinates, rotation_matrix)  # rotate the array
-        self.translate(
-            -translate_coordinates
-        )  # translate the array back to its original position
-
-        return np.dot(coordinates, rotation_matrix)
-
-    def rotate(self, x_angle=0.0, y_angle=0.0, z_angle=0.0, inplace=True):
-        """Rotate the array by the given angles.
+    def rotate(self, axis: str | float, angle: float, use_degrees=True):
+        """Rotate the array counterclockwise with the given axis pointing out of the plane.
 
         Args:
-            x_angle: Angle of rotation about the x-axis in radians.
-            y_angle: Angle of rotation about the y-axis in radians.
-            z_angle: Angle of rotation about the z-axis in radians.
-            inplace: If True, the array is rotated in-place. If False, a new array is
-                returned. Default is True.
-
-        Returns:
-            AntennaArray: Either self (if inplace=True) or a new rotated array.
+            axis (`str` | `array_like`): Axis of rotation. Can be 'x', 'y', 'z' or a 3-element vector.
+            angle (`array_like`): Angle of rotation in degrees or radians.
+            use_degrees (`bool`): If True, the angles are in degrees. Default is True.
         """
-        if inplace:
-            self._rotate(self.coordinates, x_angle, y_angle, z_angle)
-            return self
-        else:
-            new_array = self.copy()
-            new_array._rotate(new_array.coordinates, x_angle, y_angle, z_angle)
-            return new_array
+        if use_degrees:
+            angle = np.radians(angle)
+
+        if isinstance(axis, str):
+            axis_map = {"x": [1, 0, 0], "y": [0, 1, 0], "z": [0, 0, 1]}
+            axis = axis_map[axis]
+
+        rot_matrix = rotation_matrix(axis, angle)
+        array_center = self.array_center
+
+        # center the array at the origin
+        self.array_center = [0, 0, 0]
+        # Apply rotation matrix to all coordinates
+        self.coordinates = np.dot(self.coordinates, rot_matrix.T)
+        # translate the array back to its original position
+        self.array_center = array_center
+
+    # def _rotate(self, coordinates, x_angle, y_angle, z_angle):
+    #     """Rotate the array by the given angles.
+
+    #     Args:
+    #         coordinates: Coordinates to rotate.
+    #         x_angle: Angle of rotation about the x-axis in radians.
+    #         y_angle: Angle of rotation about the y-axis in radians.
+    #         z_angle: Angle of rotation about the z-axis in radians.
+
+    #     Returns:
+    #         numpy.ndarray: Rotated coordinates.
+    #     """
+    #     rotation_matrix = np.array(
+    #         [
+    #             [
+    #                 np.cos(y_angle) * np.cos(z_angle),
+    #                 np.cos(z_angle) * np.sin(x_angle) * np.sin(y_angle)
+    #                 - np.cos(x_angle) * np.sin(z_angle),
+    #                 np.cos(x_angle) * np.cos(z_angle) * np.sin(y_angle)
+    #                 + np.sin(x_angle) * np.sin(z_angle),
+    #             ],
+    #             [
+    #                 np.cos(y_angle) * np.sin(z_angle),
+    #                 np.cos(x_angle) * np.cos(z_angle)
+    #                 + np.sin(x_angle) * np.sin(y_angle) * np.sin(z_angle),
+    #                 -np.cos(z_angle) * np.sin(x_angle)
+    #                 + np.cos(x_angle) * np.sin(y_angle) * np.sin(z_angle),
+    #             ],
+    #             [
+    #                 -np.sin(y_angle),
+    #                 np.cos(y_angle) * np.sin(x_angle),
+    #                 np.cos(x_angle) * np.cos(y_angle),
+    #             ],
+    #         ]
+    #     )
+
+    #     translate_coordinates = self.translate()  # center the array at the origin
+    #     self.coordinates = np.dot(coordinates, rotation_matrix)  # rotate the array
+    #     self.translate(
+    #         -translate_coordinates
+    #     )  # translate the array back to its original position
+
+    #     return np.dot(coordinates, rotation_matrix)
 
     ############################
     # Get AntennaArray Properties
@@ -563,9 +569,7 @@ class AntennaArray:
         Returns:
             matplotlib.axes.Axes: The axes object with the plot.
         """
-        return self.plot_gain(
-            angle=angle, angle_range=angle_range, axis="el", **kwargs
-        )
+        return self.plot_gain(angle=angle, angle_range=angle_range, axis="el", **kwargs)
 
     def plot_gain_az(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
         """Plot the array pattern along azimuth at a given elevation.
@@ -578,9 +582,7 @@ class AntennaArray:
         Returns:
             matplotlib.axes.Axes: The axes object with the plot.
         """
-        return self.plot_gain(
-            angle=angle, angle_range=angle_range, axis="az", **kwargs
-        )
+        return self.plot_gain(angle=angle, angle_range=angle_range, axis="az", **kwargs)
 
     def plot_gain(
         self,

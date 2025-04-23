@@ -3,13 +3,18 @@ from matplotlib import pyplot as plt
 from ..devices import AntennaArray
 
 
-def plot_arrays(*arrays: AntennaArray, plane="xy", **kwargs):
+def plot_arrays(
+    *arrays: AntennaArray, plane="xy", **kwargs
+) -> tuple[plt.Figure, plt.Axes]:
     """Plot multiple arrays in 2D projection.
 
-    Parameters
-    ----------
-    *arrays : AntennaArray
-        List of arrays to be plotted.
+    Args:
+        *arrays (AntennaArray): List of arrays to be plotted.
+        plane (str): Plane to plot in. Can be 'xy', 'yz' or 'xz'.
+        **kwargs: Additional arguments to pass to the plotting function.
+
+    Returns:
+        tuple: Figure and axes objects.
     """
     fig, ax = plt.subplots(**kwargs)
     if plane == "xy":
@@ -49,17 +54,20 @@ def plot_arrays(*arrays: AntennaArray, plane="xy", **kwargs):
     ax.set_title(r"AntennaArray Projection in {}-plane".format(plane))
     ax.legend()
     plt.tight_layout()
-    plt.show()
+    return fig, ax
 
 
 def plot_arrays_3d(*arrays, **kwargs):
     """Plot multiple arrays in 3D.
 
-    Parameters
-    ----------
-    *arrays : AntennaArray
-        List of arrays to be plotted.
+    Args:
+        *arrays (AntennaArray): List of arrays to be plotted.
+        **kwargs: Additional arguments to pass to the plotting function.
+
+    Returns:
+        tuple: Figure and axes objects.
     """
+
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     for array in arrays:
@@ -75,5 +83,6 @@ def plot_arrays_3d(*arrays, **kwargs):
     ax.set_ylabel("y")
     ax.set_zlabel("z")
     ax.legend()
+    ax.grid(True)
     plt.tight_layout()
-    plt.show()
+    return fig, ax

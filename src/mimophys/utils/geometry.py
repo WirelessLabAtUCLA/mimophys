@@ -59,3 +59,32 @@ def sph2cart(r, az, el):
     y = r * np.sin(az) * np.cos(el)
     z = r * np.sin(el)
     return x, y, z
+
+
+def rotation_matrix(axis, theta) -> np.ndarray:
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    https://en.wikipedia.org/wiki/Euler%E2%80%93Rodrigues_formula
+    
+
+    Args:
+        axis (array-like): The axis of rotation. Should be a 3-element array-like object.
+        theta (float): The angle of rotation in radians.
+
+    Returns:
+        numpy.ndarray: The rotation matrix as a 3x3 numpy array.
+    """
+    axis = np.asarray(axis)
+    axis = axis / np.linalg.norm(axis)
+    a = np.cos(theta / 2.0)
+    b, c, d = -axis * np.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array(
+        [
+            [aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+            [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+            [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc],
+        ]
+    )
