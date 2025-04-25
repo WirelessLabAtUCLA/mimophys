@@ -2,9 +2,7 @@ from typing import Tuple
 
 import numpy as np
 
-from ..devices.antenna_array import AntennaArray
-
-__all__ = ["relative_position"]
+__all__ = ["relative_position", "sph2cart", "rotation_matrix"]
 
 
 def relative_position(tx, rx) -> Tuple[float, float, float]:
@@ -24,10 +22,10 @@ def relative_position(tx, rx) -> Tuple[float, float, float]:
     el: float
         Elevation angle.
     """
-    if isinstance(tx, AntennaArray):
-        tx = tx.array_center
-    if isinstance(rx, AntennaArray):
-        rx = rx.array_center
+    # if hasattr(tx, 'array_center'):
+    #     tx = tx.array_center
+    # if hasattr(rx, 'array_center'):
+    #     rx = rx.array_center
 
     tx = np.asarray(tx).reshape(3)
     rx = np.asarray(rx).reshape(3)

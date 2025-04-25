@@ -8,6 +8,7 @@ from matplotlib.axes import Axes
 from numpy import log10
 from numpy.typing import ArrayLike
 
+from ..plot import plot_arrays, plot_arrays_3d
 from ..utils.geometry import rotation_matrix
 
 """Azimuth 0 is along the y-axis, elevation 0 is in the x-y plane. (update 2024.10.30)
@@ -447,7 +448,7 @@ class AntennaArray:
     # Get AntennaArray Properties
     ############################
 
-    def get_array_response(self, az=0, el=0, grid=True):
+    def get_array_response(self, az=0, el=0, grid=True, use_degrees=False):
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
@@ -461,6 +462,7 @@ class AntennaArray:
                 azimuth and elevation angles.
                 Otherwise, the array response is calculated for the given azimuth and elevation
                 pair. (their dimensions must match)
+            use_degrees: If True, az and el are in degrees, otherwise in radians.
 
         Returns:
             numpy.ndarray: The array response vector up to 3 dimensions. The shape of the array is
@@ -478,6 +480,10 @@ class AntennaArray:
         el_shape = (1, -1, 1) if grid else (-1, 1, 1)
         el = np.array(el).reshape(*el_shape)
         az = np.array(az).reshape(-1, 1, 1)
+        
+        if use_degrees:
+            az = np.deg2rad(az)
+            el = np.deg2rad(el)
 
         array_response = np.exp(
             (1j * 2 * np.pi)
@@ -557,6 +563,31 @@ class AntennaArray:
     ############################
     # Plotting
     ############################
+
+    def plot_array(self, plane="xy", ax=None, **kwargs) -> tuple[plt.Figure, plt.Axes]:
+        """Plot array in 2D projection.
+
+        Args:
+            plane (`str`): Plane to plot in. Can be 'xy', 'yz' or 'xz'.
+            ax (`matplotlib.axes.Axes`): Matplotlib axes to plot on. If None, creates a new figure.
+            **kwargs: Additional arguments to pass to the plotting function.
+
+        Returns:
+            tuple: Figure and axes objects.
+        """
+
+        return plot_arrays(self, plane=plane, ax=ax, **kwargs)
+
+    def plot_array_3d(self, **kwargs) -> tuple[plt.Figure, plt.Axes]:
+        """Plot the antenna array in 3D.
+
+        Args:
+            **kwargs: Additional arguments passed to scatter.
+
+        Returns:
+            tuple: Figure and axes objects.
+        """
+        return plot_arrays_3d(self, **kwargs)
 
     def plot_gain_el(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
         """Plot the array pattern along elevation at a given azimuth.
@@ -767,72 +798,69 @@ class AntennaArray:
             self.set_weights(orig_weights)
         return ax
 
-    def plot_array_3d(self, **kwargs):
-        """Plot the antenna array in 3D.
+    # def plot_array_3d(self, **kwargs):
+    #     """Plot the antenna array in 3D.
 
-        Args:
-            **kwargs: Additional arguments passed to scatter.
+    #     Args:
+    #         **kwargs: Additional arguments passed to scatter.
 
-        Returns:
-            matplotlib.axes.Axes: The axes object with the plot.
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
-        ax.scatter(
-            self.coordinates[:, 0],
-            self.coordinates[:, 1],
-            self.coordinates[:, 2],
-            marker=self.marker,
-        )
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("z")
-        plt.tight_layout()
-        plt.show()
+    #     Returns:
+    #         matplotlib.axes.Axes: The axes object with the plot.
+    #     """
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111, projection="3d")
+    #     ax.scatter(
+    #         self.coordinates[:, 0],
+    #         self.coordinates[:, 1],
+    #         self.coordinates[:, 2],
+    #         marker=self.marker,
+    #     )
+    #     ax.set_xlabel("x")
+    #     ax.set_ylabel("y")
+    #     ax.set_zlabel("z")
+    #     plt.tight_layout()
+    #     plt.show()
 
-    def plot_array(self, plane="xy", ax=None):
-        """Plot the array in 2D projection.
+    # def plot_array(self, plane="xy", ax=None):
+    #     """Plot the array in 2D projection.
 
-        Args:
-            plane: Plane in which the array is to be projected.
-                Takes value 'xy', 'yz' or 'xz'. Default is 'xy'.
-            ax: Matplotlib axes to plot on. If None, creates a new figure.
+    #     Args:
+    #         plane: Plane in which the array is to be projected.
+    #             Takes value 'xy', 'yz' or 'xz'. Default is 'xy'.
+    #         ax: Matplotlib axes to plot on. If None, creates a new figure.
 
-        Returns:
-            matplotlib.axes.Axes: The axes object with the plot.
+    #     Returns:
+    #         matplotlib.axes.Axes: The axes object with the plot.
 
-        Raises:
-            ValueError: If plane is not 'xy', 'yz', or 'xz'.
-        """
-        if ax is None:
-            fig, ax = plt.subplots()
+    #     Raises:
+    #         ValueError: If plane is not 'xy', 'yz', or 'xz'.
+    #     """
+    #     if ax is None:
+    #         fig, ax = plt.subplots()
 
-        if plane == "xy":
-            ax.scatter(
-                self.coordinates[:, 0], self.coordinates[:, 1], marker=self.marker
-            )
-            ax.set_xlabel("x")
-            ax.set_ylabel("y")
-        elif plane == "yz":
-            ax.scatter(
-                self.coordinates[:, 1], self.coordinates[:, 2], marker=self.marker
-            )
-            ax.set_xlabel("y")
-            ax.set_ylabel("z")
-        elif plane == "xz":
-            ax.scatter(
-                self.coordinates[:, 0], self.coordinates[:, 2], marker=self.marker
-            )
-            ax.set_xlabel("x")
-            ax.set_ylabel("z")
-        else:
-            raise ValueError("plane must be 'xy', 'yz' or 'xz'")
-        ax.grid(True)
-        ax.set_title(r"AntennaArray Projection in {}-plane".format(plane))
+    #     if plane == "xy":
+    #         ax.scatter(
+    #             self.coordinates[:, 0], self.coordinates[:, 1], marker=self.marker
+    #         )
+    #         ax.set_xlabel("x")
+    #         ax.set_ylabel("y")
+    #     elif plane == "yz":
+    #         ax.scatter(
+    #             self.coordinates[:, 1], self.coordinates[:, 2], marker=self.marker
+    #         )
+    #         ax.set_xlabel("y")
+    #         ax.set_ylabel("z")
+    #     elif plane == "xz":
+    #         ax.scatter(
+    #             self.coordinates[:, 0], self.coordinates[:, 2], marker=self.marker
+    #         )
+    #         ax.set_xlabel("x")
+    #         ax.set_ylabel("z")
+    #     else:
+    #         raise ValueError("plane must be 'xy', 'yz' or 'xz'")
+    #     ax.grid(True)
+    #     ax.set_title(r"AntennaArray Projection in {}-plane".format(plane))
 
-        if ax is None:
-            plt.show()
-        return ax
-
-    plot = plot_array
-    plot_3d = plot_array_3d
+    #     if ax is None:
+    #         plt.show()
+    #     return ax

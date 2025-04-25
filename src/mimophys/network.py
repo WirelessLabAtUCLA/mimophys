@@ -392,3 +392,14 @@ class Network:
         if axes is None:
             plt.tight_layout()
             plt.show()
+
+    def plot_arrays(self, plane: str = "xy", ax=None, **kwargs):
+        """Plot the arrays in the network."""
+        if ax is None:
+            fig, ax = plt.subplots(**kwargs)
+        for node in self.connections.keys():
+            node.plot(plane=plane, ax=ax, **kwargs)
+        if ax is None:
+            plt.tight_layout()
+
+        return fig, ax
