@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,19 +38,53 @@ class AntennaArray:
 
     def __init__(
         self,
-        N: int,
-        coordinates: ArrayLike = [0, 0, 0],
+        N: Optional[int | ArrayLike] = None,
+        spacing: float = 0.5,
+        array_center: ArrayLike = (0, 0, 0),
+        coordinates: Optional[ArrayLike] = None,
         power: float = 1,
         noise_power: float = 0,
-        power_dbm: float | None = None,
-        noise_power_dbm: float | None = None,
+        dbm: bool = False,
         name: str = "AntennaArray",
         weights: ArrayLike | None = None,
         frequency: float = 1e9,
         marker: str = "o",
     ):
-        self.num_antennas = N
-        self.coordinates = np.array(coordinates)
+        """Initialize the antenna array.
+
+        Args:
+            N (int | Iterable): Number of antennas in the array.
+                Each element corresponds to the number of antennas in [x, z, y] respectively.
+                Empty elements are padded with ones.
+                If `coordinates` is given, this argument is ignored.
+            spacing (float): Spacing between the antennas. Default is 0.5.
+                If `coordinates` is given, this argument is ignored.
+            coordinates (Optional[ArrayLike]): Coordinates of the antennas to manually set each antenna.
+                The shape of the array must be (num_antennas, 3).
+            power (float): Power level of the antenna array. Default is 1.
+            noise_power (float): Noise power level. Default is 0.
+            dbm (bool): If True, power and noise_power are in dBm. Default is False.
+            weights (ArrayLike | None): Weights of the antennas. If not given, all antennas are assumed to have unit weight.
+            name (str): Name identifier for the antenna array. Default is "AntennaArray".
+            frequency (float): Operating frequency in Hz. Default is 1e9.
+            marker (str): Marker style for plotting. Default is "o".
+
+        Raises:
+            ValueError: If coordinates are not of shape (num_antennas, 3).
+            ValueError: If neither coordinates nor N are given.
+        """
+        # Need to initialize coordinates first
+        if coordinates is None:
+            if N is None:
+                raise ValueError("Either coordinates or N must be given")
+            self.coordinates = self.grid_coord(N, spacing=spacing)
+            self.array_center = array_center
+
+        else:
+            if len(coordinates.shape) != 2 or coordinates.shape[1] != 3:
+                raise ValueError("Coordinates must be of shape (num_antennas, 3)")
+            self.coordinates = np.array(coordinates)
+
         self.weights = np.ones(N) if weights is None else np.array(weights)
         self.name = name
         self.frequency = frequency
@@ -58,17 +92,157 @@ class AntennaArray:
         self.marker = marker
 
         # Power and noise power
-        if power_dbm is not None:
-            self.power_dbm = power_dbm
+        if dbm:
+            self.power_dbm = power
+            self.noise_power_dbm = noise_power
         else:
             self.power = power
-
-        if noise_power_dbm is not None:
-            self.noise_power_dbm = noise_power_dbm
-        else:
             self.noise_power = noise_power
 
-    N = Nr = Nt = property(lambda self: self.num_antennas)
+    N = num_antennas = property(lambda self: self.coordinates.shape[0])
+
+    def grid_coord(self, N: ArrayLike | int, spacing: float = 0.5):
+        """Set the coordinates of the antennas in a grid pattern centering at the origin.
+
+        Args:
+            N (int | Iterable): Number of antennas in the grid.
+                The dimension of `N` will be padded to 3,
+                and each element corresponds to the number of antennas in [x, z, y] respectively.
+            spacing: Spacing between the antennas. Default is 0.5.
+
+        Returns:
+            numpy.ndarray: Coordinates of the antennas in the grid pattern.
+        """
+        if isinstance(N, int):
+            N = [N]
+
+        N = np.concatenate((N, np.ones(3 - len(N))), axis=0).astype(int)
+
+        x = np.arange(N[0]) * spacing
+        z = np.arange(N[1]) * spacing
+        y = np.arange(N[2]) * spacing
+
+        X, Y, Z = np.meshgrid(x, y, z)
+        coordinates = np.vstack((X.flatten(), Y.flatten(), Z.flatten())).T
+        # center the coordinates around the origin
+        coordinates -= coordinates.mean(axis=0)
+        return coordinates
+
+    @classmethod
+    def ula(
+        cls,
+        N,
+        array_center=[0, 0, 0],
+        ax="x",
+        spacing=0.5,
+        **kwargs,
+    ):
+        """Creates a half-wavelength spaced, uniform linear array along the desired axis.
+
+        Args:
+            N: Number of antennas in the array.
+            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
+            ax: Axis along which the array is to be created.
+                Takes value 'x', 'y' or 'z'. Default is 'x'.
+            spacing: Spacing between the antennas. Default is 0.5.
+            **kwargs: Additional arguments passed to the constructor.
+
+        Returns:
+            AntennaArray: A uniform linear array instance.
+
+        Raises:
+            ValueError: If ax is not 'x', 'y' or 'z'.
+        """
+        if ax == "x":
+            coordinates = np.array([np.arange(N), np.zeros(N), np.zeros(N)]).T
+        elif ax == "y":
+            coordinates = np.array([np.zeros(N), np.arange(N), np.zeros(N)]).T
+        elif ax == "z":
+            coordinates = np.array([np.zeros(N), np.zeros(N), np.arange(N)]).T
+        else:
+            raise ValueError("axis must be 'x', 'y' or 'z'")
+
+        ula = cls(N, coordinates * spacing, **kwargs)
+        ula.array_center = array_center
+
+        config_map = {"x": f"({N}x1x1)", "y": f"(1x{N}x1)", "z": f"(1x1x{N})"}
+        ula._config = config_map[ax]
+
+        return ula
+
+    @classmethod
+    def upa(
+        cls,
+        N: Iterable | int,
+        array_center=(0, 0, 0),
+        plane="xz",
+        spacing=0.5,
+        **kwargs,
+    ):
+        """Creates a half-wavelength spaced, uniform planar array in the desired plane.
+
+        Args:
+            N: Number of rows and columns in the array.
+            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
+            plane: Plane in which the array is to be created or the axis orthogonal to the plane.
+                Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
+            spacing: Spacing between the antennas. Default is 0.5.
+            **kwargs: Additional arguments passed to the constructor.
+
+        Returns:
+            AntennaArray: A uniform planar array instance.
+
+        Raises:
+            ValueError: If plane is not 'xy', 'yz', or 'xz'.
+        """
+        if isinstance(N, int):
+            return cls.ula(
+                N, array_center=array_center, ax=plane, spacing=spacing, **kwargs
+            )
+
+        num_rows = N[0]
+        num_cols = N[1]
+        if plane == "xy":
+            coordinates = np.array(
+                [
+                    np.tile(np.arange(num_cols), num_rows),
+                    np.repeat(np.arange(num_rows), num_cols),
+                    np.zeros(num_rows * num_cols),
+                ]
+            ).T
+        elif plane == "yz":
+            coordinates = np.array(
+                [
+                    np.zeros(num_rows * num_cols),
+                    np.tile(np.arange(num_cols), num_rows),
+                    np.repeat(np.arange(num_rows), num_cols),
+                ]
+            ).T
+        elif plane == "xz":
+            coordinates = np.array(
+                [
+                    np.tile(np.arange(num_cols), num_rows),
+                    np.zeros(num_rows * num_cols),
+                    np.repeat(np.arange(num_rows), num_cols),
+                ]
+            ).T
+        else:
+            raise ValueError("plane must be 'xy', 'yz' or 'xz'")
+        upa = cls(num_rows * num_cols, coordinates * spacing)
+        upa.array_center = array_center
+        for kwarg in kwargs:
+            upa.__setattr__(kwarg, kwargs[kwarg])
+        config_map = {
+            "xy": f"({num_rows}x{num_cols}x1)",
+            "yz": f"(1x{num_rows}x{num_cols})",
+            "xz": f"({num_rows}x1x{num_cols})",
+        }
+        upa._config = config_map[plane]
+        return upa
+
+    # =============================
+    # ======= Properties ==========
+    # =============================
 
     def __str__(self):
         return self.name
@@ -78,6 +252,7 @@ class AntennaArray:
 
     def __len__(self):
         return self.num_antennas
+    
 
     # safe power properties for numerical stability
     @property
@@ -131,116 +306,6 @@ class AntennaArray:
         self.coordinates *= scale
 
     @classmethod
-    def ula(
-        cls,
-        N,
-        array_center=[0, 0, 0],
-        ax="x",
-        spacing=0.5,
-        **kwargs,
-    ):
-        """Creates a half-wavelength spaced, uniform linear array along the desired axis.
-
-        Args:
-            N: Number of antennas in the array.
-            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
-            ax: Axis along which the array is to be created.
-                Takes value 'x', 'y' or 'z'. Default is 'x'.
-            spacing: Spacing between the antennas. Default is 0.5.
-            **kwargs: Additional arguments passed to the constructor.
-
-        Returns:
-            AntennaArray: A uniform linear array instance.
-
-        Raises:
-            ValueError: If ax is not 'x', 'y' or 'z'.
-        """
-        if ax == "x":
-            coordinates = np.array([np.arange(N), np.zeros(N), np.zeros(N)]).T
-        elif ax == "y":
-            coordinates = np.array([np.zeros(N), np.arange(N), np.zeros(N)]).T
-        elif ax == "z":
-            coordinates = np.array([np.zeros(N), np.zeros(N), np.arange(N)]).T
-        else:
-            raise ValueError("axis must be 'x', 'y' or 'z'")
-        ula = cls(N, coordinates * spacing, **kwargs)
-        ula.array_center = array_center
-
-        config_map = {"x": f"({N}x1x1)", "y": f"(1x{N}x1)", "z": f"(1x1x{N})"}
-        ula._config = config_map[ax]
-
-        return ula
-
-    initialize_ula = ula
-
-    @classmethod
-    def upa(
-        cls,
-        N: Iterable,
-        array_center=(0, 0, 0),
-        plane="xz",
-        spacing=0.5,
-        **kwargs,
-    ):
-        """Creates a half-wavelength spaced, uniform planar array in the desired plane.
-
-        Args:
-            N: Number of rows and columns in the array.
-            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
-            plane: Plane in which the array is to be created or the axis orthogonal to the plane.
-                Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
-            spacing: Spacing between the antennas. Default is 0.5.
-            **kwargs: Additional arguments passed to the constructor.
-
-        Returns:
-            AntennaArray: A uniform planar array instance.
-
-        Raises:
-            ValueError: If plane is not 'xy', 'yz', or 'xz'.
-        """
-        num_rows = N[0]
-        num_cols = N[1]
-        if plane == "xy":
-            coordinates = np.array(
-                [
-                    np.tile(np.arange(num_cols), num_rows),
-                    np.repeat(np.arange(num_rows), num_cols),
-                    np.zeros(num_rows * num_cols),
-                ]
-            ).T
-        elif plane == "yz":
-            coordinates = np.array(
-                [
-                    np.zeros(num_rows * num_cols),
-                    np.tile(np.arange(num_cols), num_rows),
-                    np.repeat(np.arange(num_rows), num_cols),
-                ]
-            ).T
-        elif plane == "xz":
-            coordinates = np.array(
-                [
-                    np.tile(np.arange(num_cols), num_rows),
-                    np.zeros(num_rows * num_cols),
-                    np.repeat(np.arange(num_rows), num_cols),
-                ]
-            ).T
-        else:
-            raise ValueError("plane must be 'xy', 'yz' or 'xz'")
-        upa = cls(num_rows * num_cols, coordinates * spacing)
-        upa.array_center = array_center
-        for kwarg in kwargs:
-            upa.__setattr__(kwarg, kwargs[kwarg])
-        config_map = {
-            "xy": f"({num_rows}x{num_cols}x1)",
-            "yz": f"(1x{num_rows}x{num_cols})",
-            "xz": f"({num_rows}x1x{num_cols})",
-        }
-        upa._config = config_map[plane]
-        return upa
-
-    initialize_upa = upa
-
-    @classmethod
     def from_file(cls, filename):
         """Load an antenna array from a file.
 
@@ -259,10 +324,6 @@ class AntennaArray:
             filename: Name of the file to save the array to.
         """
         np.save(filename, [self.coordinates, self.weights, self.marker])
-
-    def reset(self):
-        """Reset weights to 1."""
-        self.weights = np.ones(self.num_antennas)
 
     def normalize_weights(self, norm=1):
         """Normalize the weights of the antennas to have unit norm.
@@ -343,7 +404,6 @@ class AntennaArray:
             coordinates: Coordinates of the antennas to be added. The shape of the array must be (num_antennas, 3).
         """
         self.coordinates = np.concatenate((self.coordinates, coordinates))
-        self.num_antennas += coordinates.shape[0]
         self.weights = np.concatenate((self.weights, np.ones(coordinates.shape[0])))
 
     def remove_elements(self, coordinates=None, indices=None):
@@ -361,12 +421,10 @@ class AntennaArray:
             indices = self._match_coordinates(coordinates)
             self.coordinates = np.delete(self.coordinates, indices, axis=0)
             self.weights = np.delete(self.weights, indices, axis=0)
-            self.num_antennas -= len(indices)
 
         def _remove_elements_by_idx(self, indices):
             self.coordinates = np.delete(self.coordinates, indices, axis=0)
             self.weights = np.delete(self.weights, indices, axis=0)
-            self.num_antennas -= len(indices)
 
         if coordinates is not None:
             _remove_elements_by_coord(coordinates)
@@ -480,7 +538,7 @@ class AntennaArray:
         el_shape = (1, -1, 1) if grid else (-1, 1, 1)
         el = np.array(el).reshape(*el_shape)
         az = np.array(az).reshape(-1, 1, 1)
-        
+
         if use_degrees:
             az = np.deg2rad(az)
             el = np.deg2rad(el)
