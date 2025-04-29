@@ -70,7 +70,7 @@ def plot_arrays(
 
 
 def plot_arrays_3d(
-    *arrays: Sequence[AntennaArray], **kwargs
+    *arrays: Sequence[AntennaArray], ax: plt.axes, **kwargs
 ) -> tuple[plt.Figure, plt.Axes]:
     """Plot multiple arrays in 3D.
 
@@ -81,9 +81,12 @@ def plot_arrays_3d(
     Returns:
         tuple: Figure and axes objects.
     """
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection="3d")
+    else:
+        fig = ax.figure
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
     for array in arrays:
         ax.scatter(
             array.coordinates[:, 0],

@@ -458,55 +458,11 @@ class AntennaArray:
         # translate the array back to its original position
         self.array_center = array_center
 
-    # def _rotate(self, coordinates, x_angle, y_angle, z_angle):
-    #     """Rotate the array by the given angles.
-
-    #     Args:
-    #         coordinates: Coordinates to rotate.
-    #         x_angle: Angle of rotation about the x-axis in radians.
-    #         y_angle: Angle of rotation about the y-axis in radians.
-    #         z_angle: Angle of rotation about the z-axis in radians.
-
-    #     Returns:
-    #         numpy.ndarray: Rotated coordinates.
-    #     """
-    #     rotation_matrix = np.array(
-    #         [
-    #             [
-    #                 np.cos(y_angle) * np.cos(z_angle),
-    #                 np.cos(z_angle) * np.sin(x_angle) * np.sin(y_angle)
-    #                 - np.cos(x_angle) * np.sin(z_angle),
-    #                 np.cos(x_angle) * np.cos(z_angle) * np.sin(y_angle)
-    #                 + np.sin(x_angle) * np.sin(z_angle),
-    #             ],
-    #             [
-    #                 np.cos(y_angle) * np.sin(z_angle),
-    #                 np.cos(x_angle) * np.cos(z_angle)
-    #                 + np.sin(x_angle) * np.sin(y_angle) * np.sin(z_angle),
-    #                 -np.cos(z_angle) * np.sin(x_angle)
-    #                 + np.cos(x_angle) * np.sin(y_angle) * np.sin(z_angle),
-    #             ],
-    #             [
-    #                 -np.sin(y_angle),
-    #                 np.cos(y_angle) * np.sin(x_angle),
-    #                 np.cos(x_angle) * np.cos(y_angle),
-    #             ],
-    #         ]
-    #     )
-
-    #     translate_coordinates = self.translate()  # center the array at the origin
-    #     self.coordinates = np.dot(coordinates, rotation_matrix)  # rotate the array
-    #     self.translate(
-    #         -translate_coordinates
-    #     )  # translate the array back to its original position
-
-    #     return np.dot(coordinates, rotation_matrix)
-
     ############################
     # Get AntennaArray Properties
     ############################
 
-    def get_array_response(self, az=0, el=0, grid=True, use_degrees=False):
+    def get_array_response(self, az=0, el=0, use_degrees=False):
         """Returns the array response vector at a given azimuth and elevation.
 
         This response is simply the phase shifts experienced by the elements
@@ -527,18 +483,24 @@ class AntennaArray:
             (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
         # calculate the distance of each element from the first element
-        dx = self.coordinates[:, 0] - self.coordinates[0, 0]
-        dy = self.coordinates[:, 1] - self.coordinates[0, 1]
-        dz = self.coordinates[:, 2] - self.coordinates[0, 2]
+        # dx = self.coordinates[:, 0] - self.coordinates[0, 0]
+        # dy = self.coordinates[:, 1] - self.coordinates[0, 1]
+        # dz = self.coordinates[:, 2] - self.coordinates[0, 2]
 
-        dx = dx[np.newaxis, np.newaxis, :]
-        dy = dy[np.newaxis, np.newaxis, :]
-        dz = dz[np.newaxis, np.newaxis, :]
+        # dx = dx[np.newaxis, np.newaxis, :]
+        # dy = dy[np.newaxis, np.newaxis, :]
+        # dz = dz[np.newaxis, np.newaxis, :]
 
-        el_shape = (1, -1, 1) if grid else (-1, 1, 1)
-        el = np.array(el).reshape(*el_shape)
-        az = np.array(az).reshape(-1, 1, 1)
+        # el_shape = (-1, 1, 1)
+        # el = np.array(el).reshape(*el_shape)
+        # az = np.array(az).reshape(-1, 1, 1)
 
+        dx = (self.coord_x - self.coord_x[0]).reshape(1, -1)
+        dy = (self.coord_y - self.coord_y[0]).reshape(1, -1)
+        dz = (self.coord_z - self.coord_z[0]).reshape(1, -1)
+
+        az = np.asarray(az).reshape(-1, 1)
+        el = np.asarray(el).reshape(-1, 1)
         if use_degrees:
             az = np.deg2rad(az)
             el = np.deg2rad(el)
@@ -551,9 +513,10 @@ class AntennaArray:
                 + dz * np.sin(el)
             )
         )
-        array_response = np.squeeze(array_response)
-        if self.num_antennas == 1:
-            array_response = array_response.reshape(-1, 1)
+        # array_response = np.squeeze(array_response, axis=0)
+        # if self.num_antennas == 1:
+        #     array_response = array_response.reshape(-1, 1)
+
         return array_response
 
     def get_array_gain(self, az, el, db=True, use_degrees=True):
@@ -586,38 +549,6 @@ class AntennaArray:
 
     get_gain = get_array_gain
 
-    def conjugate_beamformer(self, az=0, el=0):
-        """Returns the conjugate beamformer at a given azimuth and elevation.
-
-        Args:
-            az: Azimuth angle in degrees.
-            el: Elevation angle in degrees.
-
-        Returns:
-            numpy.ndarray: Conjugate beamformer weights.
-        """
-        array_response_vector = self.get_array_response(
-            az * np.pi / 180, el * np.pi / 180
-        )
-        return array_response_vector
-
-    def get_array_pattern_azimuth(self, el, num_points=360, range=360):
-        """Returns the array pattern at a given elevation.
-
-        Args:
-            el: Elevation angle in radians.
-            num_points: Number of points at which the pattern is to be calculated.
-                Default is 360.
-            range: Range of azimuth angles in degrees. Default is 360.
-
-        Returns:
-            numpy.ndarray: Array pattern values at specified azimuth points.
-        """
-        az = np.linspace(-range / 2, range / 2, num_points) * np.pi / 180
-        return self.get_array_response(az, el)
-
-    array_pattern_azimuth = get_array_pattern_azimuth
-
     ############################
     # Plotting
     ############################
@@ -647,36 +578,10 @@ class AntennaArray:
         """
         return plot_arrays_3d(self, **kwargs)
 
-    def plot_gain_el(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
-        """Plot the array pattern along elevation at a given azimuth.
-
-        Args:
-            angle: Azimuth angle in degrees.
-            angle_range: Range of elevation angles to plot.
-            **kwargs: Additional arguments passed to plot_gain.
-
-        Returns:
-            matplotlib.axes.Axes: The axes object with the plot.
-        """
-        return self.plot_gain(angle=angle, angle_range=angle_range, axis="el", **kwargs)
-
-    def plot_gain_az(self, angle=0, angle_range=np.linspace(-89, 89, 178), **kwargs):
-        """Plot the array pattern along azimuth at a given elevation.
-
-        Args:
-            angle: Elevation angle in degrees.
-            angle_range: Range of azimuth angles to plot.
-            **kwargs: Additional arguments passed to plot_gain.
-
-        Returns:
-            matplotlib.axes.Axes: The axes object with the plot.
-        """
-        return self.plot_gain(angle=angle, angle_range=angle_range, axis="az", **kwargs)
-
     def plot_gain(
         self,
         weights: ArrayLike = None,
-        axis: str = "el",
+        axis: str = "az",
         angle: float = 0,
         angle_range: ArrayLike = np.linspace(-89, 89, 356),
         use_degrees: bool = True,
@@ -690,8 +595,8 @@ class AntennaArray:
         Args:
             weights (ArrayLike, optional): Weights of the antennas. If not given,
                 the weights of the array are used.
-            along (str): Axis along which the gain is to be plotted.
-                Takes value 'el'/'elevation' or 'az'/'azimuth'. Default is 'el'.
+            axis (str): Axis along which the gain is to be plotted.
+                Takes value 'el' (elevation) or 'az' (azimuth). Default is 'az'.
             angle (float): Angle at which the gain is to be plotted along the given axis.
             angle_range (ArrayLike): Range of angles at which the gain is to be plotted.
             use_degrees (bool): If True, the angles are in degrees. Default is True.
@@ -702,17 +607,26 @@ class AntennaArray:
         Returns:
             matplotlib.axes.Axes: The axes object with the plot.
         """
+
         if weights is not None:
             orig_weights = self.get_weights()
             self.set_weights(weights)
-        if axis == "el" or axis == "elevation":
-            el = np.asarray(angle) * np.pi / 180
-            az = np.asarray(angle_range) * np.pi / 180
-        elif axis == "az" or axis == "azimuth":
-            az = np.asarray(angle) * np.pi / 180
-            el = np.asarray(angle_range) * np.pi / 180
+
+        if not use_degrees:
+            angle = np.rad2deg(angle)
+            angle_range = np.rad2deg(angle_range)
+
+        if axis == "az":
+            el = np.asarray(angle)
+            az = np.asarray(angle_range)
+        elif axis == "el":
+            az = np.asarray(angle)
+            el = np.asarray(angle_range)
         else:
-            raise ValueError("`along` must be 'el'/'elevation or 'az'/'azimuth'.")
+            raise ValueError("axis must be 'az' or 'el'")
+
+        az = np.deg2rad(az)
+        el = np.deg2rad(el)
 
         # vectorized version
         gain = self.get_array_gain(az, el, db=db, use_degrees=False)
@@ -740,8 +654,8 @@ class AntennaArray:
             ax.set_xlabel("Azimuth (deg)" if axis == "el" else "Elevation (deg)")
             ax.set_ylabel("Gain (dB)")
 
-        axis_name = "el" if axis == "el" else "az"
-        title = f"{axis_name} = {angle} deg, max gain = {np.max(np.abs(gain)):.2f} dB"
+        title = f"{axis} = {angle} deg, max gain = {np.max(np.abs(gain)):.2f} dB"
+
         ax.set_title(title)
         ax.grid(True)
         if weights is not None:
@@ -749,6 +663,11 @@ class AntennaArray:
         if ax is None:
             plt.tight_layout()
             plt.show()
+
+        if axis == "el":
+            if polar:
+                ax.set_theta_zero_location("W")
+
         return ax
 
     def plot_gain_3d(
@@ -787,9 +706,10 @@ class AntennaArray:
         if use_degrees:
             az = np.deg2rad(az)
             el = np.deg2rad(el)
+        
+        AZ, EL = np.meshgrid(az, el)
 
         gain = self.get_array_gain(az, el, db=dB, use_degrees=False)
-        AZ, EL = np.meshgrid(az, el)
 
         if max_gain is None:
             max_gain = np.max(gain)

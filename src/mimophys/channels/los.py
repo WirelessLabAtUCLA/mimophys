@@ -31,20 +31,17 @@ class LoSChannel(Channel):
         _, az, el = relative_position(self.tx.array_center, self.rx.array_center)
         return az, el
 
-    @aoa.setter
-    def aoa(self, _):
-        raise Warning("Use realize() to set the AoA/AoD, ignoring the input.")
 
-    aod = aoa
-
-    def generate_channels(self, az: np.ndarray, el: np.ndarray, grid=False) -> np.ndarray:
+    def generate_channels(
+        self, az: np.ndarray, el: np.ndarray, grid=False
+    ) -> np.ndarray:
         """Batch generate channel matrices for given AoA/AoD.
         :param az: Azimuth angles in radians.
         :param el: Elevation angles in radians.
         :param grid: If True, generate channel matrix for all combinations of az and el.
                     If False, generate channel matrix for each pair of az and el.
         """
-        
+
         tx_response = self.tx.get_array_response(az, el, grid=False)
         rx_response = self.rx.get_array_response(az + np.pi, el + np.pi, grid=grid)
         if len(tx_response.shape) == 1:
@@ -59,7 +56,7 @@ class LoSChannel(Channel):
         # TODO: warning if channel matrix not updated/realized
         _, az, el = relative_position(self.tx.array_center, self.rx.array_center)
         tx_response = self.tx.get_array_response(az, el)
-        rx_response = self.rx.get_array_response(az + np.pi, el + np.pi)
+        rx_response = self.rx.get_array_response(az, el)
         self.H = np.outer(rx_response, tx_response.conj())
         self.normalize_energy(self.channel_energy)
         return self

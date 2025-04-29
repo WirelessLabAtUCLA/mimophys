@@ -6,6 +6,7 @@ import numpy.linalg as LA
 from numpy import log2, log10
 
 from ..devices.antenna_array import AntennaArray
+from ..utils.geometry import relative_position
 from .path_loss import PathLoss, get_path_loss
 
 
@@ -129,6 +130,17 @@ class Channel:
     # ========================================================
     # Measurements
     # ========================================================
+
+    @property
+    def aoa(self):
+        """Line-of-sight angle of arrival (AoA) in radians."""
+        return relative_position(self.tx.array_center, self.rx.array_center)[1:]
+
+    @property
+    def aod(self):
+        """Line-of-sight angle of departure (AoD) in radians."""
+        return relative_position(self.rx.array_center, self.tx.array_center)[1:]
+
     @property
     def rx_power(self):
         """Received power in linear scale."""
@@ -150,8 +162,8 @@ class Channel:
     def bf_gain(self) -> float:
         """Normalized beamforming gain |wHf|^2 / Nt in linear scale."""
         f = self.tx.weights.reshape(-1, 1)
-        w = self.rx.weights.reshape(-1, 1)
-        return float(np.abs(w.T @ self.H @ f) ** 2 / (self.tx.N * LA.norm(w) ** 2))
+        w = self.rx.weights.reshape(1, -1)
+        return float(np.abs(w @ self.H @ f) ** 2 / (self.tx.N * LA.norm(w) ** 2))
 
     @property
     def bf_gain_db(self) -> float:

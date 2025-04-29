@@ -22,15 +22,10 @@ def relative_position(tx, rx) -> Tuple[float, float, float]:
     el: float
         Elevation angle.
     """
-    # if hasattr(tx, 'array_center'):
-    #     tx = tx.array_center
-    # if hasattr(rx, 'array_center'):
-    #     rx = rx.array_center
-
     tx = np.asarray(tx).reshape(3)
     rx = np.asarray(rx).reshape(3)
-    dxyz = dx, dy, dz = rx - tx
-    r = np.linalg.norm(dxyz)
+    dx, dy, dz = tx - rx
+    r = np.sqrt(dx**2 + dy**2 + dz**2)
     az = np.arctan2(dx, dy)
     el = np.arcsin(dz / r)
     return r, az, el
