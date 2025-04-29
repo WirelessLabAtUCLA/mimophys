@@ -6,8 +6,7 @@ __all__ = ["relative_position", "sph2cart", "rotation_matrix"]
 
 
 def relative_position(tx, rx) -> Tuple[float, float, float]:
-    """Returns the relative position of rx and tx,
-    where the origin is located at rx.
+    """Returns the relative position (range, azimuth and elevation) from loc1 to loc2.
 
     Parameters
     ----------
@@ -30,7 +29,7 @@ def relative_position(tx, rx) -> Tuple[float, float, float]:
 
     tx = np.asarray(tx).reshape(3)
     rx = np.asarray(rx).reshape(3)
-    dxyz = dx, dy, dz = tx - rx
+    dxyz = dx, dy, dz = rx - tx
     r = np.linalg.norm(dxyz)
     az = np.arctan2(dx, dy)
     el = np.arcsin(dz / r)
