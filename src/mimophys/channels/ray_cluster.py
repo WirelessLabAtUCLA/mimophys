@@ -145,37 +145,6 @@ class RayClusterChannel(Channel):
         aod = self.rng.laplace(loc=cluster_aod, scale=self.ray_std)
         return aoa, aod, unique_cluster_aoas, unique_cluster_aoas
 
-    # def generate_cluster_angles(self, n_channels) -> np.ndarray:
-    #     """Generate AoA and AoD of the cluster centers.
-
-    #     Returns:
-    #         np.ndarray: AoA and AoD of the clusters with shape (num_channels, num_clusters, 2)
-    #             The last dimension is for azimuth and elevation, respectively.
-    #     """
-    #     rv = getattr(self.rng, self.cluster_angle_distrubution)
-    #     cluster_aoa = rv(*np.array(self.aoa_bounds).T, (n_channels, self.n_clusters, 2))
-    #     cluster_aod = rv(*np.array(self.aod_bounds).T, (n_channels, self.n_clusters, 2))
-    #     return cluster_aoa, cluster_aod
-
-    # def generate_ray_angles(self, cluster_aoa, cluster_aod) -> np.ndarray:
-    #     """Generate individual AoA and AoD of rays based on cluster.
-
-    #     Args:
-    #         distrubution (str): The distribution of the ray angles. Default is 'laplace'.
-    #     Returns:
-    #         np.ndarray: AoA and AoD of the rays with shape (num_channels, num_rays)
-    #     """
-    #     rv = getattr(self.rng, self.ray_angle_distribution)
-    #     aoa = rv(
-    #         loc=cluster_aoa.repeat(self.cluster_ray_count, axis=1),
-    #         scale=self.ray_std,
-    #     )
-    #     aod = rv(
-    #         loc=cluster_aod.repeat(self.cluster_ray_count, axis=1),
-    #         scale=self.ray_std,
-    #     )
-    #     return aoa, aod
-
     def generate_ray_gain(self, angles) -> np.ndarray:
         """Generate gain of the rays with complex Gaussian distribution.
 
@@ -204,8 +173,8 @@ class RayClusterChannel(Channel):
         aoa_az, aoa_el = aoa[..., 0], aoa[..., 1]
         aod_az, aod_el = aod[..., 0], aod[..., 1]
         n_rays = aoa.shape[1]
-        arx = self.rx.get_array_response(aoa_az, aoa_el, grid=False)
-        atx = self.tx.get_array_response(aod_az, aod_el, grid=False)
+        arx = self.rx.get_array_response(aoa_az, aoa_el)
+        atx = self.tx.get_array_response(aod_az, aod_el)
         arx = arx.reshape(*aoa_az.shape, -1)
         atx = atx.reshape(*aod_az.shape, -1)
         H = np.einsum("bn,bnr,bnt->brt", gain, arx, atx.conj())
@@ -220,11 +189,11 @@ class RayClusterChannel(Channel):
         """
         # cluster_aoa, cluster_aod = self.generate_cluster_angles(1)
         self.set_rays()
-        self.aoa, self.aod, self.cluster_aoa, self.cluster_aod = (
+        self.aoas, self.aods, self.cluster_aoa, self.cluster_aod = (
             self.generate_ray_angles(rays_per_cluster=[self.rays_per_cluster])
         )
-        ray_gain = self.generate_ray_gain(self.aoa)
-        self.H = self.compute_channel_matrix(self.aoa, self.aod, ray_gain)
+        ray_gain = self.generate_ray_gain(self.aoas)
+        self.H = self.compute_channel_matrix(self.aoas, self.aods, ray_gain)
         return self
 
     def generate_channels(self, n_channels=1, return_params=False):

@@ -132,16 +132,6 @@ class Channel:
     # ========================================================
 
     @property
-    def aoa(self):
-        """Line-of-sight angle of arrival (AoA) in radians."""
-        return relative_position(self.tx.array_center, self.rx.array_center)[1:]
-
-    @property
-    def aod(self):
-        """Line-of-sight angle of departure (AoD) in radians."""
-        return relative_position(self.rx.array_center, self.tx.array_center)[1:]
-
-    @property
     def rx_power(self):
         """Received power in linear scale."""
         return self.path_loss.received_power(self)

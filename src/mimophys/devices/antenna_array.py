@@ -482,19 +482,7 @@ class AntennaArray:
             numpy.ndarray: The array response vector up to 3 dimensions. The shape of the array is
             (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
-        # calculate the distance of each element from the first element
-        # dx = self.coordinates[:, 0] - self.coordinates[0, 0]
-        # dy = self.coordinates[:, 1] - self.coordinates[0, 1]
-        # dz = self.coordinates[:, 2] - self.coordinates[0, 2]
-
-        # dx = dx[np.newaxis, np.newaxis, :]
-        # dy = dy[np.newaxis, np.newaxis, :]
-        # dz = dz[np.newaxis, np.newaxis, :]
-
-        # el_shape = (-1, 1, 1)
-        # el = np.array(el).reshape(*el_shape)
-        # az = np.array(az).reshape(-1, 1, 1)
-
+        
         dx = (self.coord_x - self.coord_x[0]).reshape(1, -1)
         dy = (self.coord_y - self.coord_y[0]).reshape(1, -1)
         dz = (self.coord_z - self.coord_z[0]).reshape(1, -1)
