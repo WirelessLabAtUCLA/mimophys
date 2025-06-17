@@ -20,6 +20,12 @@ dynamic = ["version"]
 license = "MIT"
 lisence-file = "LICENSE"
 
+[project.optional-dependencies]
+dev = [
+    "hatch>=1.14.1",
+    "uv>=0.7.13",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
