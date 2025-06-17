@@ -90,6 +90,7 @@ class AntennaArray:
         self.frequency = frequency
         self._config = f"({N} elm)"
         self.marker = marker
+        self.array_shape = N
 
         # Power and noise power
         if dbm:
