@@ -7,7 +7,10 @@ AntennaArray = TypeVar("AntennaArray")
 
 
 def plot_arrays(
-    *arrays: Sequence[AntennaArray], plane: str = "xy", ax: plt.Axes = None, **kwargs
+    *arrays: Sequence[AntennaArray] | AntennaArray,
+    plane: str = "xy",
+    ax: plt.Axes | None = None,
+    **kwargs,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Plot multiple arrays in 2D projection.
 
@@ -48,7 +51,7 @@ def plot_arrays(
             )
         ax.set_xlabel("y")
         ax.set_ylabel("z")
-        
+
     elif plane == "xz":
         for array in arrays:
             ax.scatter(
@@ -70,7 +73,7 @@ def plot_arrays(
 
 
 def plot_arrays_3d(
-    *arrays: Sequence[AntennaArray], ax: plt.axes, **kwargs
+    *arrays: Sequence[AntennaArray] | AntennaArray, ax, **kwargs
 ) -> tuple[plt.Figure, plt.Axes]:
     """Plot multiple arrays in 3D.
 

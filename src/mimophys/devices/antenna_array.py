@@ -5,6 +5,7 @@ import numpy as np
 import numpy.linalg as LA
 from matplotlib import cm
 from matplotlib.axes import Axes
+from mpl_toolkits.mplot3d import Axes3D
 from numpy import log10
 from numpy.typing import ArrayLike
 
@@ -129,117 +130,117 @@ class AntennaArray:
         coordinates -= coordinates.mean(axis=0)
         return coordinates
 
-    @classmethod
-    def ula(
-        cls,
-        N,
-        array_center=[0, 0, 0],
-        ax="x",
-        spacing=0.5,
-        **kwargs,
-    ):
-        """Creates a half-wavelength spaced, uniform linear array along the desired axis.
+    # @classmethod
+    # def ula(
+    #     cls,
+    #     N,
+    #     array_center=[0, 0, 0],
+    #     ax="x",
+    #     spacing=0.5,
+    #     **kwargs,
+    # ):
+    #     """Creates a half-wavelength spaced, uniform linear array along the desired axis.
 
-        Args:
-            N: Number of antennas in the array.
-            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
-            ax: Axis along which the array is to be created.
-                Takes value 'x', 'y' or 'z'. Default is 'x'.
-            spacing: Spacing between the antennas. Default is 0.5.
-            **kwargs: Additional arguments passed to the constructor.
+    #     Args:
+    #         N: Number of antennas in the array.
+    #         array_center: Coordinates of the center of the array. Default is [0, 0, 0].
+    #         ax: Axis along which the array is to be created.
+    #             Takes value 'x', 'y' or 'z'. Default is 'x'.
+    #         spacing: Spacing between the antennas. Default is 0.5.
+    #         **kwargs: Additional arguments passed to the constructor.
 
-        Returns:
-            AntennaArray: A uniform linear array instance.
+    #     Returns:
+    #         AntennaArray: A uniform linear array instance.
 
-        Raises:
-            ValueError: If ax is not 'x', 'y' or 'z'.
-        """
-        if ax == "x":
-            coordinates = np.array([np.arange(N), np.zeros(N), np.zeros(N)]).T
-        elif ax == "y":
-            coordinates = np.array([np.zeros(N), np.arange(N), np.zeros(N)]).T
-        elif ax == "z":
-            coordinates = np.array([np.zeros(N), np.zeros(N), np.arange(N)]).T
-        else:
-            raise ValueError("axis must be 'x', 'y' or 'z'")
+    #     Raises:
+    #         ValueError: If ax is not 'x', 'y' or 'z'.
+    #     """
+    #     if ax == "x":
+    #         coordinates = np.array([np.arange(N), np.zeros(N), np.zeros(N)]).T
+    #     elif ax == "y":
+    #         coordinates = np.array([np.zeros(N), np.arange(N), np.zeros(N)]).T
+    #     elif ax == "z":
+    #         coordinates = np.array([np.zeros(N), np.zeros(N), np.arange(N)]).T
+    #     else:
+    #         raise ValueError("axis must be 'x', 'y' or 'z'")
 
-        ula = cls(N, coordinates * spacing, **kwargs)
-        ula.array_center = array_center
+    #     ula = cls(N, coordinates * spacing, **kwargs)
+    #     ula.array_center = array_center
 
-        config_map = {"x": f"({N}x1x1)", "y": f"(1x{N}x1)", "z": f"(1x1x{N})"}
-        ula._config = config_map[ax]
+    #     config_map = {"x": f"({N}x1x1)", "y": f"(1x{N}x1)", "z": f"(1x1x{N})"}
+    #     ula._config = config_map[ax]
 
-        return ula
+    #     return ula
 
-    @classmethod
-    def upa(
-        cls,
-        N: Iterable | int,
-        array_center=(0, 0, 0),
-        plane="xz",
-        spacing=0.5,
-        **kwargs,
-    ):
-        """Creates a half-wavelength spaced, uniform planar array in the desired plane.
+    # @classmethod
+    # def upa(
+    #     cls,
+    #     N: Iterable | int,
+    #     array_center=(0, 0, 0),
+    #     plane="xz",
+    #     spacing=0.5,
+    #     **kwargs,
+    # ):
+    #     """Creates a half-wavelength spaced, uniform planar array in the desired plane.
 
-        Args:
-            N: Number of rows and columns in the array.
-            array_center: Coordinates of the center of the array. Default is [0, 0, 0].
-            plane: Plane in which the array is to be created or the axis orthogonal to the plane.
-                Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
-            spacing: Spacing between the antennas. Default is 0.5.
-            **kwargs: Additional arguments passed to the constructor.
+    #     Args:
+    #         N: Number of rows and columns in the array.
+    #         array_center: Coordinates of the center of the array. Default is [0, 0, 0].
+    #         plane: Plane in which the array is to be created or the axis orthogonal to the plane.
+    #             Takes value 'xy', 'yz' or 'xz'. Default is 'xz'.
+    #         spacing: Spacing between the antennas. Default is 0.5.
+    #         **kwargs: Additional arguments passed to the constructor.
 
-        Returns:
-            AntennaArray: A uniform planar array instance.
+    #     Returns:
+    #         AntennaArray: A uniform planar array instance.
 
-        Raises:
-            ValueError: If plane is not 'xy', 'yz', or 'xz'.
-        """
-        if isinstance(N, int):
-            return cls.ula(
-                N, array_center=array_center, ax=plane, spacing=spacing, **kwargs
-            )
+    #     Raises:
+    #         ValueError: If plane is not 'xy', 'yz', or 'xz'.
+    #     """
+    #     if isinstance(N, int):
+    #         return cls.ula(
+    #             N, array_center=array_center, ax=plane, spacing=spacing, **kwargs
+    #         )
 
-        num_rows = N[0]
-        num_cols = N[1]
-        if plane == "xy":
-            coordinates = np.array(
-                [
-                    np.tile(np.arange(num_cols), num_rows),
-                    np.repeat(np.arange(num_rows), num_cols),
-                    np.zeros(num_rows * num_cols),
-                ]
-            ).T
-        elif plane == "yz":
-            coordinates = np.array(
-                [
-                    np.zeros(num_rows * num_cols),
-                    np.tile(np.arange(num_cols), num_rows),
-                    np.repeat(np.arange(num_rows), num_cols),
-                ]
-            ).T
-        elif plane == "xz":
-            coordinates = np.array(
-                [
-                    np.tile(np.arange(num_cols), num_rows),
-                    np.zeros(num_rows * num_cols),
-                    np.repeat(np.arange(num_rows), num_cols),
-                ]
-            ).T
-        else:
-            raise ValueError("plane must be 'xy', 'yz' or 'xz'")
-        upa = cls(num_rows * num_cols, coordinates * spacing)
-        upa.array_center = array_center
-        for kwarg in kwargs:
-            upa.__setattr__(kwarg, kwargs[kwarg])
-        config_map = {
-            "xy": f"({num_rows}x{num_cols}x1)",
-            "yz": f"(1x{num_rows}x{num_cols})",
-            "xz": f"({num_rows}x1x{num_cols})",
-        }
-        upa._config = config_map[plane]
-        return upa
+    #     num_rows = N[0]
+    #     num_cols = N[1]
+    #     if plane == "xy":
+    #         coordinates = np.array(
+    #             [
+    #                 np.tile(np.arange(num_cols), num_rows),
+    #                 np.repeat(np.arange(num_rows), num_cols),
+    #                 np.zeros(num_rows * num_cols),
+    #             ]
+    #         ).T
+    #     elif plane == "yz":
+    #         coordinates = np.array(
+    #             [
+    #                 np.zeros(num_rows * num_cols),
+    #                 np.tile(np.arange(num_cols), num_rows),
+    #                 np.repeat(np.arange(num_rows), num_cols),
+    #             ]
+    #         ).T
+    #     elif plane == "xz":
+    #         coordinates = np.array(
+    #             [
+    #                 np.tile(np.arange(num_cols), num_rows),
+    #                 np.zeros(num_rows * num_cols),
+    #                 np.repeat(np.arange(num_rows), num_cols),
+    #             ]
+    #         ).T
+    #     else:
+    #         raise ValueError("plane must be 'xy', 'yz' or 'xz'")
+    #     upa = cls(num_rows * num_cols, coordinates * spacing)
+    #     upa.array_center = array_center
+    #     for kwarg in kwargs:
+    #         upa.__setattr__(kwarg, kwargs[kwarg])
+    #     config_map = {
+    #         "xy": f"({num_rows}x{num_cols}x1)",
+    #         "yz": f"(1x{num_rows}x{num_cols})",
+    #         "xz": f"({num_rows}x1x{num_cols})",
+    #     }
+    #     upa._config = config_map[plane]
+    #     return upa
 
     # =============================
     # ======= Properties ==========
@@ -253,7 +254,6 @@ class AntennaArray:
 
     def __len__(self):
         return self.num_antennas
-    
 
     # safe power properties for numerical stability
     @property
@@ -335,7 +335,7 @@ class AntennaArray:
         if LA.norm(self.weights) != 0:
             self.weights = self.weights * norm / LA.norm(self.weights)
 
-    def set_weights(self, weights: ArrayLike):
+    def set_weights(self, weights: ArrayLike, normalize: bool = False):
         """Set the weights of the antennas.
 
         Args:
@@ -356,6 +356,9 @@ class AntennaArray:
                     "The length of weights must match the number of antennas"
                 )
             self.weights = np.asarray(weights).reshape(-1)
+
+        if normalize:
+            self.normalize_weights()
 
     def get_weights(self, coordinates=None):
         """Get the weights of the antennas.
@@ -428,9 +431,9 @@ class AntennaArray:
             self.weights = np.delete(self.weights, indices, axis=0)
 
         if coordinates is not None:
-            _remove_elements_by_coord(coordinates)
+            _remove_elements_by_coord(self, coordinates)
         elif indices is not None:
-            _remove_elements_by_idx(indices)
+            _remove_elements_by_idx(self, indices)
         else:
             raise ValueError("Either coordinates or indices must be given")
 
@@ -483,7 +486,7 @@ class AntennaArray:
             numpy.ndarray: The array response vector up to 3 dimensions. The shape of the array is
             (len(az), len(el), len(coordinates)) and is squeezed if az and/or el are scalars.
         """
-        
+
         dx = (self.coord_x - self.coord_x[0]).reshape(1, -1)
         dy = (self.coord_y - self.coord_y[0]).reshape(1, -1)
         dz = (self.coord_z - self.coord_z[0]).reshape(1, -1)
@@ -542,7 +545,9 @@ class AntennaArray:
     # Plotting
     ############################
 
-    def plot_array(self, plane="xy", ax=None, **kwargs) -> tuple[plt.Figure, plt.Axes]:
+    def plot_array(
+        self, plane="xy", ax: plt.Axes | None = None, **kwargs
+    ) -> tuple[plt.Figure, plt.Axes]:
         """Plot array in 2D projection.
 
         Args:
@@ -569,14 +574,14 @@ class AntennaArray:
 
     def plot_gain(
         self,
-        weights: ArrayLike = None,
+        weights: ArrayLike | None = None,
         axis: str = "az",
         angle: float = 0,
         angle_range: ArrayLike = np.linspace(-89, 89, 356),
         use_degrees: bool = True,
-        db: bool = True,
+        dB: bool = True,
         polar: bool = True,
-        ax: Axes = None,
+        ax: Axes | None = None,
         **kwargs,
     ):
         """Plot the array pattern at a given elevation or azimuth.
@@ -618,7 +623,7 @@ class AntennaArray:
         el = np.deg2rad(el)
 
         # vectorized version
-        gain = self.get_array_gain(az, el, db=db, use_degrees=False)
+        gain = self.get_array_gain(az, el, db=dB, use_degrees=False)
 
         if ax is None:
             if polar:
@@ -695,16 +700,20 @@ class AntennaArray:
         if use_degrees:
             az = np.deg2rad(az)
             el = np.deg2rad(el)
-        
+
         AZ, EL = np.meshgrid(az, el)
 
-        gain = self.get_array_gain(az, el, db=dB, use_degrees=False)
+        # Compute gain using flattened meshgrid values
+        az_flat = AZ.flatten()
+        el_flat = EL.flatten()
+        gain_flat = self.get_array_gain(az_flat, el_flat, db=dB, use_degrees=False)
+        gain = gain_flat.reshape(AZ.shape)
 
         if max_gain is None:
             max_gain = np.max(gain)
         if min_gain is None:
             min_gain = np.min(gain)
-        gain = np.clip(gain, min_gain, max_gain).T
+        gain = np.clip(gain, min_gain, max_gain)
         gain -= min_gain
 
         figsize = kwargs.pop("figsize", (8, 8))
@@ -715,7 +724,7 @@ class AntennaArray:
             )
 
         norm = plt.Normalize(min_gain, max_gain)
-        m = cm.ScalarMappable(cmap=cm.coolwarm, norm=norm)
+        m = cm.ScalarMappable(cmap=kwargs.pop("cmap", "Blues"), norm=norm)
         m.set_array(gain + min_gain)
         colors = m.to_rgba(gain + min_gain)
 
@@ -764,70 +773,3 @@ class AntennaArray:
         if weights is not None:
             self.set_weights(orig_weights)
         return ax
-
-    # def plot_array_3d(self, **kwargs):
-    #     """Plot the antenna array in 3D.
-
-    #     Args:
-    #         **kwargs: Additional arguments passed to scatter.
-
-    #     Returns:
-    #         matplotlib.axes.Axes: The axes object with the plot.
-    #     """
-    #     fig = plt.figure()
-    #     ax = fig.add_subplot(111, projection="3d")
-    #     ax.scatter(
-    #         self.coordinates[:, 0],
-    #         self.coordinates[:, 1],
-    #         self.coordinates[:, 2],
-    #         marker=self.marker,
-    #     )
-    #     ax.set_xlabel("x")
-    #     ax.set_ylabel("y")
-    #     ax.set_zlabel("z")
-    #     plt.tight_layout()
-    #     plt.show()
-
-    # def plot_array(self, plane="xy", ax=None):
-    #     """Plot the array in 2D projection.
-
-    #     Args:
-    #         plane: Plane in which the array is to be projected.
-    #             Takes value 'xy', 'yz' or 'xz'. Default is 'xy'.
-    #         ax: Matplotlib axes to plot on. If None, creates a new figure.
-
-    #     Returns:
-    #         matplotlib.axes.Axes: The axes object with the plot.
-
-    #     Raises:
-    #         ValueError: If plane is not 'xy', 'yz', or 'xz'.
-    #     """
-    #     if ax is None:
-    #         fig, ax = plt.subplots()
-
-    #     if plane == "xy":
-    #         ax.scatter(
-    #             self.coordinates[:, 0], self.coordinates[:, 1], marker=self.marker
-    #         )
-    #         ax.set_xlabel("x")
-    #         ax.set_ylabel("y")
-    #     elif plane == "yz":
-    #         ax.scatter(
-    #             self.coordinates[:, 1], self.coordinates[:, 2], marker=self.marker
-    #         )
-    #         ax.set_xlabel("y")
-    #         ax.set_ylabel("z")
-    #     elif plane == "xz":
-    #         ax.scatter(
-    #             self.coordinates[:, 0], self.coordinates[:, 2], marker=self.marker
-    #         )
-    #         ax.set_xlabel("x")
-    #         ax.set_ylabel("z")
-    #     else:
-    #         raise ValueError("plane must be 'xy', 'yz' or 'xz'")
-    #     ax.grid(True)
-    #     ax.set_title(r"AntennaArray Projection in {}-plane".format(plane))
-
-    #     if ax is None:
-    #         plt.show()
-    #     return ax
